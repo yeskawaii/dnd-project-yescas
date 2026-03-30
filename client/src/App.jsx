@@ -11,7 +11,7 @@ function App() {
   const [activeTab, setActiveTab] = useState("stats");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4001";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4001/api";
 
   // 1. OBTENER PERSONAJE (GET)
   useEffect(() => {
