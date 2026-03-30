@@ -38,16 +38,14 @@ function App() {
 
   // 3. ELIMINAR OBJETO (DELETE)
   const handleDeleteItem = (id) => {
-    axios
-      .delete(`http://localhost:4000/api/inventory/${id}`)
-      .then(() => {
-        setChar((prev) => ({
-          ...prev,
-          inventory: prev.inventory.filter((item) => item.id !== id),
-        }));
-        toast.error("Objeto eliminado");
-      })
-      .catch(() => toast.error("Error al eliminar"));
+    axios.delete(`http://localhost:4000/api/inventory/${id}`).then(() => {
+      // Filtramos usando _id
+      setChar((prev) => ({
+        ...prev,
+        inventory: prev.inventory.filter((item) => item._id !== id),
+      }));
+      toast.error("Objeto eliminado");
+    });
   };
 
   if (!char)
@@ -100,7 +98,7 @@ function App() {
               <div className="space-y-1">
                 {char.inventory.map((item) => (
                   <InventoryItem
-                    key={item.id}
+                    key={item._id}
                     item={item}
                     onDelete={handleDeleteItem}
                   />

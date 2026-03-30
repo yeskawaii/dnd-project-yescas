@@ -1,22 +1,29 @@
 import mongoose from 'mongoose';
 
+// Definimos la estructura (Schema) para que Mongo sepa qué guardar
 const characterSchema = new mongoose.Schema({
-  userId: String,
-  name: { type: String, default: "Nuevo Aventurero" },
-  class: String,
+  name: { type: String, required: true },
   level: { type: Number, default: 1 },
-  stats: {
-    str: { type: Number, default: 10 },
-    dex: { type: Number, default: 10 },
-    con: { type: Number, default: 10 },
-    int: { type: Number, default: 10 },
-    wis: { type: Number, default: 10 },
-    cha: { type: Number, default: 10 }
+  hp: {
+    current: { type: Number, default: 20 },
+    max: { type: Number, default: 20 }
   },
-
-  features: [{ title: String, description: String }], 
-  spells: [{ name: String, level: Number, desc: String }],
-  inventory: [{ item: String, weight: Number, desc: String }]
+  stats: {
+    STR: { type: Number, default: 10 },
+    DEX: { type: Number, default: 10 },
+    CON: { type: Number, default: 10 },
+    INT: { type: Number, default: 10 },
+    WIS: { type: Number, default: 10 },
+    CHA: { type: Number, default: 10 }
+  },
+  // El inventario es un array de objetos
+  inventory: [{
+    name: String,
+    weight: Number,
+    desc: String,
+    icon: { type: String, default: '📦' }
+  }]
 });
 
-export const Character = mongoose.model('Character', characterSchema);
+const Character = mongoose.model('Character', characterSchema);
+export default Character;

@@ -34,7 +34,7 @@ export default function InventoryItem({ item, onDelete }) {
           </p>
           
           <button 
-            onClick={() => onDelete(item.id)}
+            onClick={() => onDelete(item._id)}
             className="w-full py-2 bg-red-900/20 border border-red-900/50 rounded-lg text-[10px] font-black text-red-500 uppercase tracking-tighter active:scale-95 transition-all"
           >
             🗑️ Tirar Objeto
