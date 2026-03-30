@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 
 const characterSchema = new mongoose.Schema({
-  // EL DUEÑO: Esto vincula al personaje con un usuario de tu tabla de Users
   user: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User', 
@@ -9,6 +8,7 @@ const characterSchema = new mongoose.Schema({
   },
   
   name: { type: String, required: true },
+  class: { type: String, default: "Guerrero" },
   level: { type: Number, default: 1 },
   
   hp: {
