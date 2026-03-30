@@ -11,10 +11,12 @@ function App() {
   const [activeTab, setActiveTab] = useState("stats");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4001/api";
+
   // 1. OBTENER PERSONAJE (GET)
   useEffect(() => {
     axios
-      .get("http://localhost:4000/api/character")
+      .get(`${API_URL}/character`)
       .then((res) => setChar(res.data))
       .catch((err) => {
         console.error("Error en API:", err);
@@ -25,7 +27,7 @@ function App() {
   // 2. AGREGAR OBJETO (POST)
   const handleAddItem = (newItem) => {
     axios
-      .post("http://localhost:4000/api/inventory", newItem)
+      .post(`${API_URL}/inventory`, newItem)
       .then((res) => {
         setChar((prev) => ({
           ...prev,
@@ -38,7 +40,7 @@ function App() {
 
   // 3. ELIMINAR OBJETO (DELETE)
   const handleDeleteItem = (id) => {
-    axios.delete(`http://localhost:4000/api/inventory/${id}`).then(() => {
+    axios.delete(`${API_URL}/inventory/${id}`).then(() => {
       // Filtramos usando _id
       setChar((prev) => ({
         ...prev,

@@ -67,5 +67,5 @@ app.delete('/api/inventory/:id', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 4001;
 app.listen(PORT, () => console.log(`🚀 Server volando en el puerto ${PORT}`));
