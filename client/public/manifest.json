@@ -1,0 +1,15 @@
+{
+  "name": "Bag of Holding D&D 3.5",
+  "short_name": "BagOfHolding",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#F97316", 
+  "background_color": "#020617",
+  "icons": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
