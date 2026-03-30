@@ -1,0 +1,27 @@
+services:
+  bag-backend:
+    build: ./server
+    env_file:
+      - .env
+    container_name: bag-backend
+    restart: always
+    expose:
+      - "4001"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - PORT=4001
+    networks:
+      - proxy-network
+
+  bag-frontend:
+    build: ./client
+    container_name: bag-frontend
+    restart: always
+    expose:
+      - "80"
+    networks:
+      - proxy-network
+
+networks:
+  proxy-network:
+    external: true

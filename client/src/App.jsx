@@ -1,31 +1,35 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useEffect, useState, useContext } from "react";
+import api from "./api/axios"; // Importamos nuestro axios configurado
+import { AuthContext } from "./context/AuthContext";
 import { Toaster, toast } from "sonner";
+import Login from "./pages/Login"; // Asegúrate de haber creado esta página
+
 import StatCard from "./components/StatCard";
 import HealthTracker from "./components/HealthTracker";
 import InventoryItem from "./components/InventoryItem";
 import AddItemModal from "./components/AddItemModal";
 
 function App() {
+  const { user, logout, loading } = useContext(AuthContext);
   const [char, setChar] = useState(null);
   const [activeTab, setActiveTab] = useState("stats");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 1. OBTENER PERSONAJE (GET)
+  // 1. OBTENER PERSONAJE (GET) - Solo si hay usuario
   useEffect(() => {
-    axios
-      .get("http://localhost:4000/api/character")
-      .then((res) => setChar(res.data))
-      .catch((err) => {
-        console.error("Error en API:", err);
-        toast.error("Error de conexión con el servidor");
-      });
-  }, []);
+    if (user) {
+      api.get("/character")
+        .then((res) => setChar(res.data))
+        .catch((err) => {
+          console.error("Error en API:", err);
+          toast.error("Error al cargar tu personaje");
+        });
+    }
+  }, [user]);
 
   // 2. AGREGAR OBJETO (POST)
   const handleAddItem = (newItem) => {
-    axios
-      .post("http://localhost:4000/api/inventory", newItem)
+    api.post("/character/inventory", newItem)
       .then((res) => {
         setChar((prev) => ({
           ...prev,
@@ -38,8 +42,7 @@ function App() {
 
   // 3. ELIMINAR OBJETO (DELETE)
   const handleDeleteItem = (id) => {
-    axios.delete(`http://localhost:4000/api/inventory/${id}`).then(() => {
-      // Filtramos usando _id
+    api.delete(`/character/inventory/${id}`).then(() => {
       setChar((prev) => ({
         ...prev,
         inventory: prev.inventory.filter((item) => item._id !== id),
@@ -48,32 +51,50 @@ function App() {
     });
   };
 
-  if (!char)
-    return (
-      <div className="h-screen bg-slate-950 flex items-center justify-center text-orange-500 font-black tracking-widest animate-pulse">
-        CARGANDO AVENTURA...
-      </div>
-    );
+  // Pantalla de carga inicial
+  if (loading) return (
+    <div className="h-screen bg-slate-950 flex items-center justify-center text-orange-500 font-black animate-pulse">
+      CONECTANDO A LA DB...
+    </div>
+  );
+
+  // Si no está logueado, lo mandamos al Login
+  if (!user) return <Login />;
+
+  // Si no ha cargado el personaje pero hay usuario
+  if (!char) return (
+    <div className="h-screen bg-slate-950 flex items-center justify-center text-orange-500 font-black animate-pulse uppercase">
+      Buscando a {user.username}...
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 pb-24 font-sans selection:bg-orange-500/30 uppercase">
       <Toaster position="top-center" richColors theme="dark" />
 
       {/* HEADER */}
-      <header className="p-6 pt-12 border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-30">
-        <h1 className="text-2xl font-black tracking-tighter text-orange-500 leading-none">
-          {char.name}
-        </h1>
-        <p className="text-[10px] font-black text-slate-500 mt-1 tracking-widest">
-          NIVEL {char.level} • PÍCARO
-        </p>
+      <header className="p-6 pt-12 border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-30 flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-black tracking-tighter text-orange-500 leading-none">
+            {char.name}
+          </h1>
+          <p className="text-[10px] font-black text-slate-500 mt-1 tracking-widest">
+            NIVEL {char.level} • {user.username}
+          </p>
+        </div>
+        <button 
+          onClick={logout}
+          className="text-[10px] bg-slate-800 px-3 py-1 rounded-md text-slate-400 font-black hover:bg-red-900/30 hover:text-red-500 transition-all"
+        >
+          SALIR
+        </button>
       </header>
 
       <main className="p-4 max-w-md mx-auto relative z-10">
         {/* PESTAÑA: STATS */}
         {activeTab === "stats" && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <HealthTracker currentHp={24} maxHp={30} />
+            <HealthTracker currentHp={char.hp?.current || 0} maxHp={char.hp?.max || 0} />
             <div className="grid grid-cols-2 gap-x-4 gap-y-10 justify-items-center mt-6 pb-10">
               {Object.entries(char.stats).map(([stat, val]) => (
                 <StatCard key={stat} label={stat} value={val} />
@@ -128,7 +149,6 @@ function App() {
         )}
       </main>
 
-      {/* MODAL CENTRADO */}
       <AddItemModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
