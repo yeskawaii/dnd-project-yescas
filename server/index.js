@@ -1,18 +1,11 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4000;
-
 app.use(cors());
 app.use(express.json());
 
-// Mock Data (Esto vendrá de MongoDB después)
-// server/index.js
-const characterData = {
+let characterData = {
   name: "Kuro el Cuervo",
   level: 3,
   stats: { STR: 10, DEX: 18, CON: 14, INT: 12, WIS: 10, CHA: 14 },
@@ -23,8 +16,18 @@ const characterData = {
   ]
 };
 
-app.get('/api/character', (req, res) => {
-  res.json(characterData);
+app.get('/api/character', (req, res) => res.json(characterData));
+
+app.post('/api/inventory', (req, res) => {
+  const newItem = { id: Date.now(), ...req.body };
+  characterData.inventory.push(newItem);
+  res.status(201).json(newItem);
 });
 
-app.listen(PORT, () => console.log(`🚀 Server en puerto ${PORT}`));
+app.delete('/api/inventory/:id', (req, res) => {
+  const { id } = req.params;
+  characterData.inventory = characterData.inventory.filter(i => i.id != id);
+  res.sendStatus(200);
+});
+
+app.listen(4000, () => console.log('🚀 Server en 4000'));
