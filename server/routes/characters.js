@@ -114,4 +114,19 @@ router.delete('/:charId/spells/:spellId', async (req, res) => {
   }
 });
 
+// Actualizar stats o HP: /api/character/:id/update
+router.patch('/:id/update', async (req, res) => {
+  try {
+    const { stats, hp } = req.body;
+    const updatedChar = await Character.findByIdAndUpdate(
+      req.params.id,
+      { $set: { stats, hp } },
+      { new: true }
+    );
+    res.json(updatedChar);
+  } catch (err) {
+    res.status(500).json({ error: "No se pudo actualizar el personaje" });
+  }
+});
+
 export default router;
