@@ -22,5 +22,14 @@ mongoose.connect(process.env.MONGO_URI)
 app.use('/api/auth', authRoutes);
 app.use('/api/character', characterRoutes);
 
+app.get('/api/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState;
+  if (dbStatus === 1) {
+    res.status(200).send('OK - DB Alive 🔥');
+  } else {
+    res.status(503).send('Error - DB Down 💀');
+  }
+});
+
 const PORT = process.env.PORT || 4001;
 app.listen(PORT, () => console.log(`🚀 Server volando en el puerto ${PORT}`));

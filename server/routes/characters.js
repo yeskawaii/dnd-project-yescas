@@ -129,4 +129,21 @@ router.patch('/:id/update', async (req, res) => {
   }
 });
 
+// Agregar Nota: POST /api/character/:id/notes
+router.post('/:id/notes', async (req, res) => {
+  const { title, content, color } = req.body;
+  const char = await Character.findById(req.params.id);
+  char.notes.push({ title, content, color: color || 'slate' });
+  await char.save();
+  res.json(char.notes[char.notes.length - 1]);
+});
+
+// Borrar Nota: DELETE /api/character/:charId/notes/:noteId
+router.delete('/:charId/notes/:noteId', async (req, res) => {
+  const char = await Character.findById(req.params.charId);
+  char.notes = char.notes.filter(n => n._id.toString() !== req.params.noteId);
+  await char.save();
+  res.json({ message: "Nota eliminada" });
+});
+
 export default router;
