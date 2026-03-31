@@ -14,9 +14,9 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4001/api/health"]
       interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 20s # Le damos tiempo a la DB de conectar
+      timeout: 10s
+      retries: 5
+      start_period: 30s # 30 segundos de gracia para que Node y Mongo conecten
     networks:
       - proxy-network
 
