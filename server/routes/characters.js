@@ -205,4 +205,32 @@ router.delete('/:id/attacks/:attackId', async (req, res) => {
   }
 });
 
+// 🌟 AGREGAR UNA DOTE/RASGO
+router.post('/:id/feats', async (req, res) => {
+  try {
+    const character = await Character.findById(req.params.id);
+    if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
+
+    character.feats.push(req.body);
+    await character.save();
+    res.status(201).json(character.feats[character.feats.length - 1]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al memorizar la dote' });
+  }
+});
+
+// 🗑️ ELIMINAR UNA DOTE/RASGO
+router.delete('/:id/feats/:featId', async (req, res) => {
+  try {
+    const character = await Character.findById(req.params.id);
+    if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
+
+    character.feats.pull(req.params.featId);
+    await character.save();
+    res.status(200).json({ message: 'Dote olvidada' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al borrar la dote' });
+  }
+});
+
 export default router;

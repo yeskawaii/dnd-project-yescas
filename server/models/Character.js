@@ -85,6 +85,13 @@ const characterSchema = new mongoose.Schema({
     max: { type: Number, default: 10 }
   },
 
+  // DOTES Y RASGOS (Feats & Traits)
+  feats: [{
+    name: { type: String, required: true },
+    type: { type: String, default: "General" }, // Ej: Combate, Magia, Racial, Clase
+    desc: { type: String, required: true }
+  }],
+
   // STATS (Usando los nombres que ya tienes en tu frontend)
   stats: {
     Fuerza: { type: Number, default: 10 },
