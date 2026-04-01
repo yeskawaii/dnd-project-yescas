@@ -59,6 +59,14 @@ const characterSchema = new mongoose.Schema({
     damageType: { type: String, default: "Cortante" } // "Cortante", "Perforante"
   }],
 
+  // BILLETERA
+  money: {
+    cp: { type: Number, default: 0 }, // Cobre (Copper)
+    sp: { type: Number, default: 0 }, // Plata (Silver)
+    gp: { type: Number, default: 0 }, // Oro (Gold)
+    pp: { type: Number, default: 0 }  // Platino (Platinum)
+  },
+
   saves: {
     fort: { type: Number, default: 0 },
     ref: { type: Number, default: 0 },

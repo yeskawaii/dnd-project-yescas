@@ -106,6 +106,10 @@ function App() {
           .then((res) => setSelectedChar({ ...selectedChar, notes: [...(selectedChar.notes || []), res.data] }));
         setEditModal({ ...editModal, isOpen: false });
         return;
+      case 'cp': updateData = { money: { ...selectedChar.money, cp: Number(valToSave) } }; break;
+      case 'sp': updateData = { money: { ...selectedChar.money, sp: Number(valToSave) } }; break;
+      case 'gp': updateData = { money: { ...selectedChar.money, gp: Number(valToSave) } }; break;
+      case 'pp': updateData = { money: { ...selectedChar.money, pp: Number(valToSave) } }; break;
     }
 
     handleUpdateCharacter(updateData);
@@ -329,9 +333,55 @@ function App() {
 
             {/* OTRAS PESTAÑAS (Inv, Spells, Notes) */}
             {activeTab === "inv" && (
-              <div><h2 className="text-2xl font-black text-white mb-6 italic tracking-tighter">Mochila</h2>
-              <div className="space-y-1">{selectedChar.inventory?.map(i => <InventoryItem key={i._id} item={i} onDelete={handleDeleteItem} />)}</div>
-              <button onClick={() => setIsModalOpen(true)} className="w-full mt-6 border-2 border-dashed border-slate-800 p-4 rounded-2xl text-slate-600 font-black text-[10px] uppercase hover:bg-slate-900 hover:text-white transition-colors">+ AGREGAR OBJETO</button></div>
+              <div className="space-y-6">
+                
+                {/* LA BILLETERA FACHERA */}
+                <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-4 shadow-lg relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 blur-3xl rounded-full"></div>
+                  
+                  <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <span>🪙</span> Monedero
+                  </h3>
+                  
+                  <div className="grid grid-cols-4 gap-2 relative z-10">
+                    {/* Cobre */}
+                    <motion.div whileTap={{ scale: 0.9 }} onClick={() => openEdit("Cobre", "MONEDAS DE COBRE (PC)", selectedChar.money?.cp || 0, 'cp')} className="bg-slate-950/80 border border-[#b87333]/30 rounded-2xl p-2 flex flex-col items-center justify-center cursor-pointer hover:border-[#b87333]/60 transition-colors">
+                      <span className="w-6 h-6 rounded-full bg-[#b87333]/10 text-[#b87333] flex items-center justify-center text-[9px] font-black mb-1 shadow-[0_0_10px_rgba(184,115,51,0.2)]">PC</span>
+                      <span className="font-black text-white text-sm">{selectedChar.money?.cp || 0}</span>
+                    </motion.div>
+                    
+                    {/* Plata */}
+                    <motion.div whileTap={{ scale: 0.9 }} onClick={() => openEdit("Plata", "MONEDAS DE PLATA (PP)", selectedChar.money?.sp || 0, 'sp')} className="bg-slate-950/80 border border-slate-400/30 rounded-2xl p-2 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400/60 transition-colors">
+                      <span className="w-6 h-6 rounded-full bg-slate-400/10 text-slate-400 flex items-center justify-center text-[9px] font-black mb-1 shadow-[0_0_10px_rgba(148,163,184,0.2)]">PP</span>
+                      <span className="font-black text-white text-sm">{selectedChar.money?.sp || 0}</span>
+                    </motion.div>
+
+                    {/* Oro */}
+                    <motion.div whileTap={{ scale: 0.9 }} onClick={() => openEdit("Oro", "MONEDAS DE ORO (PO)", selectedChar.money?.gp || 0, 'gp')} className="bg-slate-950/80 border border-yellow-500/40 rounded-2xl p-2 flex flex-col items-center justify-center cursor-pointer hover:border-yellow-500/80 transition-colors">
+                      <span className="w-6 h-6 rounded-full bg-yellow-500/10 text-yellow-500 flex items-center justify-center text-[9px] font-black mb-1 shadow-[0_0_10px_rgba(234,179,8,0.3)]">PO</span>
+                      <span className="font-black text-white text-sm">{selectedChar.money?.gp || 0}</span>
+                    </motion.div>
+
+                    {/* Platino */}
+                    <motion.div whileTap={{ scale: 0.9 }} onClick={() => openEdit("Platino", "MONEDAS DE PLATINO (PPT)", selectedChar.money?.pp || 0, 'pp')} className="bg-slate-950/80 border border-cyan-400/40 rounded-2xl p-2 flex flex-col items-center justify-center cursor-pointer hover:border-cyan-400/80 transition-colors">
+                      <span className="w-6 h-6 rounded-full bg-cyan-400/10 text-cyan-400 flex items-center justify-center text-[9px] font-black mb-1 shadow-[0_0_10px_rgba(34,211,238,0.3)]">PPT</span>
+                      <span className="font-black text-white text-sm">{selectedChar.money?.pp || 0}</span>
+                    </motion.div>
+                  </div>
+                </div>
+
+                {/* INVENTARIO NORMAL */}
+                <div>
+                  <h2 className="text-2xl font-black text-white mb-4 italic tracking-tighter">Mochila</h2>
+                  <div className="space-y-1">
+                    {selectedChar.inventory?.map(i => <InventoryItem key={i._id} item={i} onDelete={handleDeleteItem} />)}
+                  </div>
+                  <button onClick={() => setIsModalOpen(true)} className="w-full mt-6 border-2 border-dashed border-slate-800 p-4 rounded-2xl text-slate-600 font-black text-[10px] uppercase hover:bg-slate-900 hover:text-white transition-colors">
+                    + AGREGAR OBJETO
+                  </button>
+                </div>
+
+              </div>
             )}
 
             {activeTab === "spells" && (
