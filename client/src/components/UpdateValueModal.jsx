@@ -9,10 +9,14 @@ const UpdateValueModal = ({ isOpen, onClose, onUpdate, title, initialValue, labe
 
   if (!isOpen) return null;
 
+  // Definimos qué campos son de puro texto
+  const isTextField = ['race', 'alignment', 'deity', 'speed'].includes(type);
+  const isLongText = type === 'note';
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Si es nota, mandamos string; si es stat/hp, mandamos número
-    const finalValue = type === 'note' ? value : parseInt(value);
+    // Si es texto o nota, mandamos el string directo. Si no, lo convertimos a número.
+    const finalValue = (isTextField || isLongText) ? value : parseInt(value) || 0;
     onUpdate(finalValue);
     onClose();
   };
@@ -26,8 +30,8 @@ const UpdateValueModal = ({ isOpen, onClose, onUpdate, title, initialValue, labe
           <div>
             <label className="text-[9px] font-black text-slate-500 mb-1 block tracking-widest text-center uppercase">{label}</label>
             
-            {/* Si es una nota, usamos un textarea para que quepa todo el chisme */}
-            {type === 'note' ? (
+            {/* 1. CASO NOTAS: Cuadro grande */}
+            {isLongText ? (
               <textarea
                 autoFocus
                 value={value}
@@ -36,12 +40,15 @@ const UpdateValueModal = ({ isOpen, onClose, onUpdate, title, initialValue, labe
                 placeholder="Escribe aquí tu hazaña..."
               />
             ) : (
+              /* 2. CASO INPUT: Puede ser texto (Raza) o número (Stats) */
               <input 
                 autoFocus 
-                type="number" 
+                // AQUÍ ESTÁ LA MAGIA: Cambia dinámicamente entre text y number
+                type={isTextField ? "text" : "number"} 
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                className="w-full bg-slate-800 p-4 rounded-2xl text-white text-center text-4xl font-black outline-none border border-slate-700 focus:border-orange-500 transition-all"
+                // Si es texto, bajamos un poco el tamaño de la fuente para que quepa la palabra
+                className={`w-full bg-slate-800 p-4 rounded-2xl text-white text-center font-black outline-none border border-slate-700 focus:border-orange-500 transition-all ${isTextField ? 'text-xl uppercase' : 'text-4xl'}`}
               />
             )}
           </div>
