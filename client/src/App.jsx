@@ -16,7 +16,11 @@ import AddSpellModal from "./components/AddSpellModal";
 import UpdateValueModal from "./components/UpdateValueModal";
 import NoteCard from "./components/NoteCard";
 import SkillTable from "./components/SkillTable";
-import CollapsibleSection from "./components/CollapsibleSection"; // NUEVO ACORDEÓN
+import CollapsibleSection from "./components/CollapsibleSection";
+import AttackCard from "./components/AttackCard";
+import AddAttackModal from "./components/AddAttackModal";
+import FeatCard from "./components/FeatCard";
+import AddFeatModal from "./components/AddFeatModal";
 
 // --- UTILIDADES DE CONVERSIÓN ---
 import { lbToKg, kgToLb, inToCm, cmToIn } from "./utils/conversions";
@@ -28,9 +32,12 @@ function App() {
   const [activeTab, setActiveTab] = useState("stats");
   const [unitSystem, setUnitSystem] = useState("imp");
 
+  // ESTADOS PARA LOS MODALES
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCharModalOpen, setIsCharModalOpen] = useState(false);
   const [isSpellModalOpen, setIsSpellModalOpen] = useState(false);
+  const [isAttackModalOpen, setIsAttackModalOpen] = useState(false);
+  const [isFeatModalOpen, setIsFeatModalOpen] = useState(false);
 
   const [editModal, setEditModal] = useState({
     isOpen: false,
@@ -94,10 +101,10 @@ function App() {
     switch (t) {
       case "name":
         updateData = { name: valToSave };
-        break;
+        break; // EDITAR NOMBRE
       case "class":
         updateData = { class: valToSave };
-        break;
+        break; // EDITAR CLASE
       case "race":
       case "alignment":
       case "deity":
@@ -169,72 +176,114 @@ function App() {
           );
         setEditModal({ ...editModal, isOpen: false });
         return;
+      case "cp":
+        updateData = {
+          money: { ...selectedChar.money, cp: Number(valToSave) },
+        };
+        break;
+      case "sp":
+        updateData = {
+          money: { ...selectedChar.money, sp: Number(valToSave) },
+        };
+        break;
+      case "gp":
+        updateData = {
+          money: { ...selectedChar.money, gp: Number(valToSave) },
+        };
+        break;
+      case "pp":
+        updateData = {
+          money: { ...selectedChar.money, pp: Number(valToSave) },
+        };
+        break;
     }
 
     handleUpdateCharacter(updateData);
     setEditModal({ ...editModal, isOpen: false });
   };
 
-  // HANDLERS
+  // HANDLERS PARA ARRAYS (Listas)
   const handleAddItem = (i) =>
-    api
-      .post(`/character/${selectedChar._id}/inventory`, i)
-      .then((r) =>
-        setSelectedChar({
-          ...selectedChar,
-          inventory: [...selectedChar.inventory, r.data],
-        }),
-      );
+    api.post(`/character/${selectedChar._id}/inventory`, i).then((r) =>
+      setSelectedChar({
+        ...selectedChar,
+        inventory: [...selectedChar.inventory, r.data],
+      }),
+    );
   const handleDeleteItem = (id) =>
-    api
-      .delete(`/character/${selectedChar._id}/inventory/${id}`)
-      .then(() =>
-        setSelectedChar({
-          ...selectedChar,
-          inventory: selectedChar.inventory.filter((i) => i._id !== id),
-        }),
-      );
+    api.delete(`/character/${selectedChar._id}/inventory/${id}`).then(() =>
+      setSelectedChar({
+        ...selectedChar,
+        inventory: selectedChar.inventory.filter((i) => i._id !== id),
+      }),
+    );
+
   const handleAddSpell = (s) =>
-    api
-      .post(`/character/${selectedChar._id}/spells`, s)
-      .then((r) =>
-        setSelectedChar({
-          ...selectedChar,
-          spells: [...selectedChar.spells, r.data],
-        }),
-      );
+    api.post(`/character/${selectedChar._id}/spells`, s).then((r) =>
+      setSelectedChar({
+        ...selectedChar,
+        spells: [...selectedChar.spells, r.data],
+      }),
+    );
   const handleToggleSpell = (id) =>
-    api
-      .patch(`/character/${selectedChar._id}/spells/${id}`)
-      .then((r) =>
-        setSelectedChar({
-          ...selectedChar,
-          spells: selectedChar.spells.map((s) => (s._id === id ? r.data : s)),
-        }),
-      );
+    api.patch(`/character/${selectedChar._id}/spells/${id}`).then((r) =>
+      setSelectedChar({
+        ...selectedChar,
+        spells: selectedChar.spells.map((s) => (s._id === id ? r.data : s)),
+      }),
+    );
   const handleDeleteSpell = (id) =>
-    api
-      .delete(`/character/${selectedChar._id}/spells/${id}`)
-      .then(() =>
-        setSelectedChar({
-          ...selectedChar,
-          spells: selectedChar.spells.filter((s) => s._id !== id),
-        }),
-      );
+    api.delete(`/character/${selectedChar._id}/spells/${id}`).then(() =>
+      setSelectedChar({
+        ...selectedChar,
+        spells: selectedChar.spells.filter((s) => s._id !== id),
+      }),
+    );
+
   const handleDeleteNote = (id) =>
-    api
-      .delete(`/character/${selectedChar._id}/notes/${id}`)
-      .then(() =>
-        setSelectedChar({
-          ...selectedChar,
-          notes: selectedChar.notes.filter((n) => n._id !== id),
-        }),
-      );
+    api.delete(`/character/${selectedChar._id}/notes/${id}`).then(() =>
+      setSelectedChar({
+        ...selectedChar,
+        notes: selectedChar.notes.filter((n) => n._id !== id),
+      }),
+    );
   const handleCreateCharacter = (d) =>
     api.post("/character", d).then((r) => {
       setCharacters([...characters, r.data]);
       setSelectedChar(r.data);
     });
+
+  // HANDLERS DE ARMAS Y ATAQUES
+  const handleAddAttack = (a) =>
+    api.post(`/character/${selectedChar._id}/attacks`, a).then((r) =>
+      setSelectedChar({
+        ...selectedChar,
+        attacks: [...(selectedChar.attacks || []), r.data],
+      }),
+    );
+  const handleDeleteAttack = (id) =>
+    api.delete(`/character/${selectedChar._id}/attacks/${id}`).then(() =>
+      setSelectedChar({
+        ...selectedChar,
+        attacks: (selectedChar.attacks || []).filter((a) => a._id !== id),
+      }),
+    );
+
+  // HANDLERS DE DOTES Y RASGOS
+  const handleAddFeat = (f) =>
+    api.post(`/character/${selectedChar._id}/feats`, f).then((r) =>
+      setSelectedChar({
+        ...selectedChar,
+        feats: [...(selectedChar.feats || []), r.data],
+      }),
+    );
+  const handleDeleteFeat = (id) =>
+    api.delete(`/character/${selectedChar._id}/feats/${id}`).then(() =>
+      setSelectedChar({
+        ...selectedChar,
+        feats: (selectedChar.feats || []).filter((f) => f._id !== id),
+      }),
+    );
 
   if (loading)
     return (
@@ -297,17 +346,13 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 pb-32 font-sans uppercase">
       <Toaster position="top-center" richColors theme="dark" />
-
-      {/* HEADER MEJORADO Y LIMPIO */}
+      {/* HEADER TOTALMENTE EDITABLE */}
       <header className="px-6 py-4 pt-10 sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 flex justify-between items-center">
         <div className="flex items-center gap-3 w-full">
-          {/* ICONO */}
           <div className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-full flex items-center justify-center text-xl shadow-inner flex-shrink-0">
             {selectedChar.class === "Hechicero" ? "🪄" : "⚔️"}
           </div>
-
           <div className="flex flex-col w-full overflow-hidden">
-            {/* NOMBRE EDITABLE */}
             <h1
               onClick={() =>
                 openEdit(
@@ -322,9 +367,7 @@ function App() {
               {selectedChar.name}{" "}
               <span className="text-[10px] text-slate-700">✎</span>
             </h1>
-
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              {/* CLASE EDITABLE */}
               <span
                 onClick={() =>
                   openEdit("Clase", "PROFESIÓN", selectedChar.class, "class")
@@ -333,8 +376,6 @@ function App() {
               >
                 {selectedChar.class} ✎
               </span>
-
-              {/* NIVEL EDITABLE */}
               <span
                 onClick={() =>
                   openEdit("Nivel", "NIVEL ACTUAL", selectedChar.level, "level")
@@ -343,10 +384,7 @@ function App() {
               >
                 LVL {selectedChar.level} ✎
               </span>
-
               <span className="text-slate-700 text-[8px]">•</span>
-
-              {/* EXPERIENCIA EDITABLE */}
               <span
                 onClick={() =>
                   openEdit(
@@ -363,8 +401,6 @@ function App() {
             </div>
           </div>
         </div>
-
-        {/* BOTONES DE SALIDA Y CAMBIO */}
         <div className="flex gap-2 ml-2 flex-shrink-0">
           <button
             onClick={() => setSelectedChar(null)}
@@ -380,7 +416,6 @@ function App() {
           </button>
         </div>
       </header>
-
       <main className="p-4 max-w-md mx-auto">
         <AnimatePresence mode="wait">
           <motion.div
@@ -392,7 +427,7 @@ function App() {
           >
             {activeTab === "stats" && (
               <div className="space-y-2">
-                {/* VIDA (Siempre visible, fuera de acordeón) */}
+                {/* VIDA */}
                 <div className="mb-6">
                   <HealthTracker
                     currentHp={selectedChar.hp?.current || 0}
@@ -428,7 +463,7 @@ function App() {
                             f,
                           )
                         }
-                        className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer"
+                        className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800"
                       >
                         <p className="text-[7px] font-black text-slate-600 uppercase">
                           {f}
@@ -447,7 +482,7 @@ function App() {
                           "height",
                         )
                       }
-                      className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer"
+                      className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800"
                     >
                       <p className="text-[7px] font-black text-slate-600 uppercase">
                         Estatura
@@ -467,7 +502,7 @@ function App() {
                           "physicalWeight",
                         )
                       }
-                      className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer"
+                      className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800"
                     >
                       <p className="text-[7px] font-black text-slate-600 uppercase">
                         Peso Pers.
@@ -481,7 +516,7 @@ function App() {
                   </div>
                 </CollapsibleSection>
 
-                {/* 2. COMBATE (Abierto por defecto) */}
+                {/* 2. COMBATE */}
                 <CollapsibleSection
                   title="Estadísticas de Combate"
                   defaultOpen={true}
@@ -496,7 +531,7 @@ function App() {
                           "ca_armor",
                         )
                       }
-                      className="bg-slate-900 border border-cyan-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer"
+                      className="bg-slate-900 border border-cyan-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800"
                     >
                       <p className="text-[8px] font-black text-cyan-400 mb-1">
                         C. ARMADURA
@@ -519,7 +554,7 @@ function App() {
                           "bab",
                         )
                       }
-                      className="bg-slate-900 border border-orange-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer flex flex-col justify-center"
+                      className="bg-slate-900 border border-orange-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer flex flex-col justify-center hover:bg-slate-800"
                     >
                       <p className="text-[8px] font-black text-orange-400 mb-1">
                         BAB
@@ -537,7 +572,7 @@ function App() {
                           "init_misc",
                         )
                       }
-                      className="bg-slate-900 border border-purple-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer"
+                      className="bg-slate-900 border border-purple-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800"
                     >
                       <p className="text-[8px] font-black text-purple-400 mb-1 tracking-tighter">
                         INICIATIVA
@@ -553,6 +588,7 @@ function App() {
                       </p>
                     </div>
                   </div>
+
                   {/* SALVACIONES */}
                   <div className="flex gap-2">
                     {["fort", "ref", "will"].map((s) => (
@@ -566,7 +602,7 @@ function App() {
                             `save_${s}`,
                           )
                         }
-                        className={`flex-1 bg-slate-900/80 p-3 rounded-3xl border border-slate-800 text-center cursor-pointer active:bg-slate-800`}
+                        className={`flex-1 bg-slate-900/80 p-3 rounded-3xl border border-slate-800 text-center cursor-pointer hover:bg-slate-800`}
                       >
                         <span className="text-[7px] block font-black text-slate-600">
                           {s.toUpperCase()}
@@ -578,6 +614,38 @@ function App() {
                         </span>
                       </div>
                     ))}
+                  </div>
+
+                  {/* ARMAS Y ATAQUES <-- NUEVO */}
+                  <div className="mt-6 pt-4 border-t border-slate-800">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        Armas Equipadas
+                      </h3>
+                      <button
+                        onClick={() => setIsAttackModalOpen(true)}
+                        className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-2 py-1 rounded hover:bg-orange-500/20 transition-colors"
+                      >
+                        + AGREGAR
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {selectedChar.attacks?.length > 0 ? (
+                        selectedChar.attacks.map((atk) => (
+                          <AttackCard
+                            key={atk._id}
+                            attack={atk}
+                            character={selectedChar}
+                            onDelete={handleDeleteAttack}
+                          />
+                        ))
+                      ) : (
+                        <p className="text-center text-[10px] text-slate-600 italic py-4">
+                          Desarmado. Usa los puños.
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </CollapsibleSection>
 
@@ -617,6 +685,36 @@ function App() {
                   </div>
                 </CollapsibleSection>
 
+                {/* 5. DOTES Y RASGOS */}
+                <CollapsibleSection title="Dotes y Rasgos">
+                  <div className="flex justify-between items-center mb-3 mt-2">
+                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">
+                      Habilidades Pasivas
+                    </span>
+                    <button
+                      onClick={() => setIsFeatModalOpen(true)}
+                      className="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded hover:bg-emerald-500/20 transition-colors"
+                    >
+                      + AGREGAR DOTE
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    {selectedChar.feats?.length > 0 ? (
+                      selectedChar.feats.map((f) => (
+                        <FeatCard
+                          key={f._id}
+                          feat={f}
+                          onDelete={handleDeleteFeat}
+                        />
+                      ))
+                    ) : (
+                      <p className="text-center text-[10px] text-slate-600 italic py-4">
+                        Sin dotes registradas.
+                      </p>
+                    )}
+                  </div>
+                </CollapsibleSection>
+
                 {/* CARGA MOCHILA */}
                 <div className="mt-8 px-2 pb-8">
                   <div className="flex justify-between items-end mb-2">
@@ -632,7 +730,7 @@ function App() {
                           "weightMax",
                         )
                       }
-                      className="text-[10px] font-black text-white cursor-pointer"
+                      className="text-[10px] font-black text-white cursor-pointer hover:text-cyan-400"
                     >
                       {unitSystem === "imp"
                         ? `${totalWeight} / ${selectedChar.weight?.max || 100} LB`
@@ -653,25 +751,123 @@ function App() {
 
             {/* OTRAS PESTAÑAS (Inv, Spells, Notes) */}
             {activeTab === "inv" && (
-              <div>
-                <h2 className="text-2xl font-black text-white mb-6 italic tracking-tighter">
-                  Mochila
-                </h2>
-                <div className="space-y-1">
-                  {selectedChar.inventory?.map((i) => (
-                    <InventoryItem
-                      key={i._id}
-                      item={i}
-                      onDelete={handleDeleteItem}
-                    />
-                  ))}
+              <div className="space-y-6">
+                {/* LA BILLETERA FACHERA */}
+                <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-4 shadow-lg relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 blur-3xl rounded-full"></div>
+
+                  <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <span>🪙</span> Monedero
+                  </h3>
+
+                  <div className="grid grid-cols-4 gap-2 relative z-10">
+                    {/* Cobre */}
+                    <motion.div
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() =>
+                        openEdit(
+                          "Cobre",
+                          "MONEDAS DE COBRE (PC)",
+                          selectedChar.money?.cp || 0,
+                          "cp",
+                        )
+                      }
+                      className="bg-slate-950/80 border border-[#b87333]/30 rounded-2xl p-2 flex flex-col items-center justify-center cursor-pointer hover:border-[#b87333]/60 transition-colors"
+                    >
+                      <span className="w-6 h-6 rounded-full bg-[#b87333]/10 text-[#b87333] flex items-center justify-center text-[9px] font-black mb-1 shadow-[0_0_10px_rgba(184,115,51,0.2)]">
+                        PC
+                      </span>
+                      <span className="font-black text-white text-sm">
+                        {selectedChar.money?.cp || 0}
+                      </span>
+                    </motion.div>
+
+                    {/* Plata */}
+                    <motion.div
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() =>
+                        openEdit(
+                          "Plata",
+                          "MONEDAS DE PLATA (PP)",
+                          selectedChar.money?.sp || 0,
+                          "sp",
+                        )
+                      }
+                      className="bg-slate-950/80 border border-slate-400/30 rounded-2xl p-2 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400/60 transition-colors"
+                    >
+                      <span className="w-6 h-6 rounded-full bg-slate-400/10 text-slate-400 flex items-center justify-center text-[9px] font-black mb-1 shadow-[0_0_10px_rgba(148,163,184,0.2)]">
+                        PP
+                      </span>
+                      <span className="font-black text-white text-sm">
+                        {selectedChar.money?.sp || 0}
+                      </span>
+                    </motion.div>
+
+                    {/* Oro */}
+                    <motion.div
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() =>
+                        openEdit(
+                          "Oro",
+                          "MONEDAS DE ORO (PO)",
+                          selectedChar.money?.gp || 0,
+                          "gp",
+                        )
+                      }
+                      className="bg-slate-950/80 border border-yellow-500/40 rounded-2xl p-2 flex flex-col items-center justify-center cursor-pointer hover:border-yellow-500/80 transition-colors"
+                    >
+                      <span className="w-6 h-6 rounded-full bg-yellow-500/10 text-yellow-500 flex items-center justify-center text-[9px] font-black mb-1 shadow-[0_0_10px_rgba(234,179,8,0.3)]">
+                        PO
+                      </span>
+                      <span className="font-black text-white text-sm">
+                        {selectedChar.money?.gp || 0}
+                      </span>
+                    </motion.div>
+
+                    {/* Platino */}
+                    <motion.div
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() =>
+                        openEdit(
+                          "Platino",
+                          "MONEDAS DE PLATINO (PPT)",
+                          selectedChar.money?.pp || 0,
+                          "pp",
+                        )
+                      }
+                      className="bg-slate-950/80 border border-cyan-400/40 rounded-2xl p-2 flex flex-col items-center justify-center cursor-pointer hover:border-cyan-400/80 transition-colors"
+                    >
+                      <span className="w-6 h-6 rounded-full bg-cyan-400/10 text-cyan-400 flex items-center justify-center text-[9px] font-black mb-1 shadow-[0_0_10px_rgba(34,211,238,0.3)]">
+                        PPT
+                      </span>
+                      <span className="font-black text-white text-sm">
+                        {selectedChar.money?.pp || 0}
+                      </span>
+                    </motion.div>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setIsModalOpen(true)}
-                  className="w-full mt-6 border-2 border-dashed border-slate-800 p-4 rounded-2xl text-slate-600 font-black text-[10px] uppercase"
-                >
-                  + AGREGAR OBJETO
-                </button>
+
+                {/* INVENTARIO NORMAL */}
+                <div>
+                  <h2 className="text-2xl font-black text-white mb-4 italic tracking-tighter">
+                    Mochila
+                  </h2>
+                  <div className="space-y-1">
+                    {selectedChar.inventory?.map((i) => (
+                      <InventoryItem
+                        key={i._id}
+                        item={i}
+                        onDelete={handleDeleteItem}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="w-full mt-6 border-2 border-dashed border-slate-800 p-4 rounded-2xl text-slate-600 font-black text-[10px] uppercase hover:bg-slate-900 hover:text-white transition-colors"
+                  >
+                    + AGREGAR OBJETO
+                  </button>
+                </div>
               </div>
             )}
 
@@ -683,7 +879,7 @@ function App() {
                   </h2>
                   <button
                     onClick={() => setIsSpellModalOpen(true)}
-                    className="bg-cyan-600 px-4 py-1 rounded-full text-[10px] font-black"
+                    className="bg-cyan-600 px-4 py-1 rounded-full text-[10px] font-black hover:bg-cyan-500 transition-colors"
                   >
                     + APRENDER
                   </button>
@@ -711,7 +907,7 @@ function App() {
                     onClick={() =>
                       openEdit("Nota", "ESCRIBIR EN EL DIARIO", "", "note")
                     }
-                    className="bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase"
+                    className="bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-slate-700 transition-colors"
                   >
                     + ESCRIBIR
                   </button>
@@ -730,8 +926,7 @@ function App() {
           </motion.div>
         </AnimatePresence>
       </main>
-
-      {/* MODALES */}
+      {/* MODALES REUNIDOS */}
       <UpdateValueModal
         isOpen={editModal.isOpen}
         title={editModal.title}
@@ -755,6 +950,16 @@ function App() {
         isOpen={isSpellModalOpen}
         onClose={() => setIsSpellModalOpen(false)}
         onAdd={handleAddSpell}
+      />
+      <AddAttackModal
+        isOpen={isAttackModalOpen}
+        onClose={() => setIsAttackModalOpen(false)}
+        onAdd={handleAddAttack}
+      />
+      <AddFeatModal
+        isOpen={isFeatModalOpen}
+        onClose={() => setIsFeatModalOpen(false)}
+        onAdd={handleAddFeat}
       />
 
       {/* NAV FLOTANTE ESTILO CELULAR */}

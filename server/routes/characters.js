@@ -169,4 +169,68 @@ router.delete('/:charId/notes/:noteId', async (req, res) => {
   }
 });
 
+// 🗡️ AGREGAR UN ARMA/ATAQUE
+router.post('/:id/attacks', async (req, res) => {
+  try {
+    const character = await Character.findById(req.params.id);
+    if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
+
+    // Mete el arma nueva al arreglo
+    character.attacks.push(req.body);
+    await character.save();
+
+    // Regresa el último elemento (el arma que se acaba de crear con su _id nuevo)
+    const newAttack = character.attacks[character.attacks.length - 1];
+    res.status(201).json(newAttack);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error en la forja (DB Error)' });
+  }
+});
+
+// 🗑️ ELIMINAR UN ARMA/ATAQUE
+router.delete('/:id/attacks/:attackId', async (req, res) => {
+  try {
+    const character = await Character.findById(req.params.id);
+    if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
+
+    // Saca el arma del arreglo usando su ID
+    character.attacks.pull(req.params.attackId);
+    await character.save();
+
+    res.status(200).json({ message: 'Arma destruida exitosamente' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error al tirar el arma' });
+  }
+});
+
+// 🌟 AGREGAR UNA DOTE/RASGO
+router.post('/:id/feats', async (req, res) => {
+  try {
+    const character = await Character.findById(req.params.id);
+    if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
+
+    character.feats.push(req.body);
+    await character.save();
+    res.status(201).json(character.feats[character.feats.length - 1]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al memorizar la dote' });
+  }
+});
+
+// 🗑️ ELIMINAR UNA DOTE/RASGO
+router.delete('/:id/feats/:featId', async (req, res) => {
+  try {
+    const character = await Character.findById(req.params.id);
+    if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
+
+    character.feats.pull(req.params.featId);
+    await character.save();
+    res.status(200).json({ message: 'Dote olvidada' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al borrar la dote' });
+  }
+});
+
 export default router;

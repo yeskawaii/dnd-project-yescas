@@ -24,3 +24,28 @@ export const calculateSkillTotal = (skill, stats) => {
   
   return mod + (Number(skill.ranks) || 0) + (Number(skill.miscModifier) || 0) + classBonus;
 };
+
+// Calcular el Bono de Ataque Total
+export const calculateAttackTotal = (attack, character) => {
+  const bab = character.baseAttack || 0;
+  
+  // Asumimos Fuerza para Melee y Destreza para Rango
+  // (Si tienes armas "Finesse/Sutil", podrías agregar lógica para usar DEX en Melee)
+  const statUsed = attack.type === 'Ranged' ? 'Destreza' : 'Fuerza';
+  const statMod = calculateMod(character.stats[statUsed]);
+  
+  return bab + statMod + (attack.attackBonus || 0);
+};
+
+// Calcular el Bono de Daño Total (Normalmente solo usa Fuerza)
+export const calculateDamageBonus = (attack, character) => {
+  // Las armas a distancia (Arcos) usualmente no suman Destreza al daño
+  if (attack.type === 'Ranged') {
+    return attack.damageBonus || 0;
+  }
+  
+  const strMod = calculateMod(character.stats['Fuerza']);
+  
+  // Si usas un arma a dos manos, sumarías 1.5x de fuerza (podrías añadir una checkbox "Dos Manos" después)
+  return strMod + (attack.damageBonus || 0);
+};

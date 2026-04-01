@@ -47,6 +47,26 @@ const characterSchema = new mongoose.Schema({
   speed: { type: String, default: "30 ft" },  // Velocidad
   initiativeMisc: { type: Number, default: 0 }, // Para dotes como Iniciativa Mejorada
 
+  // ATAQUES Y ARMAS
+  attacks: [{
+    name: { type: String, required: true }, // "Espada Larga de Hierro Frío"
+    attackBonus: { type: Number, default: 0 }, // El +1 mágico o bonos extra
+    damageDice: { type: String, default: "1d8" }, // "1d8", "2d6", etc.
+    damageBonus: { type: Number, default: 0 }, // Daño mágico extra
+    critRange: { type: String, default: "20" }, // "19-20" o "20"
+    critMultiplier: { type: String, default: "x2" }, // "x2", "x3"
+    type: { type: String, default: "Melee" }, // "Melee", "Ranged", "Finesse"
+    damageType: { type: String, default: "Cortante" } // "Cortante", "Perforante"
+  }],
+
+  // BILLETERA
+  money: {
+    cp: { type: Number, default: 0 }, // Cobre (Copper)
+    sp: { type: Number, default: 0 }, // Plata (Silver)
+    gp: { type: Number, default: 0 }, // Oro (Gold)
+    pp: { type: Number, default: 0 }  // Platino (Platinum)
+  },
+
   saves: {
     fort: { type: Number, default: 0 },
     ref: { type: Number, default: 0 },
@@ -64,6 +84,13 @@ const characterSchema = new mongoose.Schema({
     current: { type: Number, default: 10 },
     max: { type: Number, default: 10 }
   },
+
+  // DOTES Y RASGOS (Feats & Traits)
+  feats: [{
+    name: { type: String, required: true },
+    type: { type: String, default: "General" }, // Ej: Combate, Magia, Racial, Clase
+    desc: { type: String, required: true }
+  }],
 
   // STATS (Usando los nombres que ya tienes en tu frontend)
   stats: {
