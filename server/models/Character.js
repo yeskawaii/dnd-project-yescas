@@ -47,6 +47,18 @@ const characterSchema = new mongoose.Schema({
   speed: { type: String, default: "30 ft" },  // Velocidad
   initiativeMisc: { type: Number, default: 0 }, // Para dotes como Iniciativa Mejorada
 
+  // ATAQUES Y ARMAS
+  attacks: [{
+    name: { type: String, required: true }, // "Espada Larga de Hierro Frío"
+    attackBonus: { type: Number, default: 0 }, // El +1 mágico o bonos extra
+    damageDice: { type: String, default: "1d8" }, // "1d8", "2d6", etc.
+    damageBonus: { type: Number, default: 0 }, // Daño mágico extra
+    critRange: { type: String, default: "20" }, // "19-20" o "20"
+    critMultiplier: { type: String, default: "x2" }, // "x2", "x3"
+    type: { type: String, default: "Melee" }, // "Melee", "Ranged", "Finesse"
+    damageType: { type: String, default: "Cortante" } // "Cortante", "Perforante"
+  }],
+
   saves: {
     fort: { type: Number, default: 0 },
     ref: { type: Number, default: 0 },
