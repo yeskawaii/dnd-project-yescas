@@ -10,7 +10,7 @@ const UpdateValueModal = ({ isOpen, onClose, onUpdate, title, initialValue, labe
   if (!isOpen) return null;
 
   // Definimos qué campos son de puro texto
-  const isTextField = ['race', 'alignment', 'deity', 'speed'].includes(type);
+  const isTextField = ['race', 'alignment', 'deity', 'speed', 'name', 'class'].includes(type);
   const isLongText = type === 'note';
 
   const handleSubmit = (e) => {
