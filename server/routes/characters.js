@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.use(protect);
 
-// 1. GET: Obtener TODOS los personajes del usuario
+// 1. GET: Obtener TODOS los personajes
 router.get('/', async (req, res) => {
   try {
     const characters = await Character.find({ user: req.user });
@@ -16,30 +16,49 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 2. POST: Crear un nuevo personaje
+// 2. POST: Crear personaje (CORREGIDO)
 router.post('/', async (req, res) => {
   try {
-    // Recibimos name y charClass (que viene del modal)
     const { name, charClass, stats } = req.body;
     
     const newChar = await Character.create({
       user: req.user,
       name: name || "Nuevo Aventurero",
-      // Si quieres guardar la clase, asegúrate de tener el campo en tu Model (Character.js)
-      // Si no lo tienes, Mongo simplemente lo ignorará por ahora.
       class: charClass || "Guerrero", 
       level: 1,
-      stats: stats || { STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 },
+      race: "Humano",
+      // --- AQUÍ ESTABA EL ERROR: Solo el valor, no la definición del tipo ---
+      experience: 0, 
+      physicalWeight: 150, 
+      // --------------------------------------------------------------------
+      alignment: "N",
+      deity: "Ninguna",
+      baseAttack: 0,
+      initiativeMisc: 0,
+      speed: "30 ft",
+      saves: { fort: 0, ref: 0, will: 0 },
+      armorClass: { armor: 0, shield: 0, natural: 0, misc: 0 },
+      stats: stats || { 
+        Fuerza: 10, 
+        Destreza: 10, 
+        Constitución: 10, 
+        Inteligencia: 10, 
+        Sabiduría: 10, 
+        Carisma: 10 
+      },
+      hp: { current: 10, max: 10 },
       inventory: [],
-      spells: []
+      spells: [],
+      notes: []
     });
     res.status(201).json(newChar);
   } catch (err) {
+    console.error(err);
     res.status(400).json({ error: "No se pudo crear el personaje" });
   }
 });
 
-// 3. DELETE: Borrar un personaje completo
+// 3. DELETE: Borrar personaje
 router.delete('/:charId', async (req, res) => {
   try {
     const result = await Character.findOneAndDelete({ _id: req.params.charId, user: req.user });
@@ -50,13 +69,28 @@ router.delete('/:charId', async (req, res) => {
   }
 });
 
-// --- RUTAS DE INVENTARIO ---
+// 4. PATCH: ACTUALIZACIÓN MAESTRA (Dinámica)
+router.patch('/:id/update', async (req, res) => {
+  try {
+    const updates = req.body;
+    const updatedChar = await Character.findByIdAndUpdate(
+      req.params.id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    );
 
+    if (!updatedChar) return res.status(404).json({ error: "No se encontró el personaje" });
+    res.json(updatedChar);
+  } catch (err) {
+    console.error("Error al actualizar:", err);
+    res.status(500).json({ error: "No se pudo actualizar el personaje" });
+  }
+});
+
+// --- INVENTARIO ---
 router.post('/:charId/inventory', async (req, res) => {
   try {
     const char = await Character.findOne({ _id: req.params.charId, user: req.user });
-    if (!char) return res.status(404).json({ error: "Personaje no encontrado" });
-
     char.inventory.push(req.body); 
     await char.save(); 
     res.status(201).json(char.inventory[char.inventory.length - 1]);
@@ -76,13 +110,10 @@ router.delete('/:charId/inventory/:itemId', async (req, res) => {
   }
 });
 
-// --- RUTAS DE SPELLS ---
-
+// --- SPELLS ---
 router.post('/:charId/spells', async (req, res) => {
   try {
     const char = await Character.findOne({ _id: req.params.charId, user: req.user });
-    if (!char) return res.status(404).json({ error: "Personaje no encontrado" });
-
     char.spells.push(req.body); 
     await char.save();
     res.status(201).json(char.spells[char.spells.length - 1]);
@@ -114,36 +145,28 @@ router.delete('/:charId/spells/:spellId', async (req, res) => {
   }
 });
 
-// Actualizar stats o HP: /api/character/:id/update
-router.patch('/:id/update', async (req, res) => {
+// --- NOTAS ---
+router.post('/:id/notes', async (req, res) => {
   try {
-    const { stats, hp } = req.body;
-    const updatedChar = await Character.findByIdAndUpdate(
-      req.params.id,
-      { $set: { stats, hp } },
-      { new: true }
-    );
-    res.json(updatedChar);
+    const { title, content, color } = req.body;
+    const char = await Character.findById(req.params.id);
+    char.notes.push({ title, content, color: color || 'cyan' });
+    await char.save();
+    res.json(char.notes[char.notes.length - 1]);
   } catch (err) {
-    res.status(500).json({ error: "No se pudo actualizar el personaje" });
+    res.status(400).json({ error: "Error al crear nota" });
   }
 });
 
-// Agregar Nota: POST /api/character/:id/notes
-router.post('/:id/notes', async (req, res) => {
-  const { title, content, color } = req.body;
-  const char = await Character.findById(req.params.id);
-  char.notes.push({ title, content, color: color || 'slate' });
-  await char.save();
-  res.json(char.notes[char.notes.length - 1]);
-});
-
-// Borrar Nota: DELETE /api/character/:charId/notes/:noteId
 router.delete('/:charId/notes/:noteId', async (req, res) => {
-  const char = await Character.findById(req.params.charId);
-  char.notes = char.notes.filter(n => n._id.toString() !== req.params.noteId);
-  await char.save();
-  res.json({ message: "Nota eliminada" });
+  try {
+    const char = await Character.findById(req.params.charId);
+    char.notes = char.notes.filter(n => n._id.toString() !== req.params.noteId);
+    await char.save();
+    res.json({ message: "Nota eliminada" });
+  } catch (err) {
+    res.status(400).json({ error: "Error al borrar nota" });
+  }
 });
 
 export default router;
