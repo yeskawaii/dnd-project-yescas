@@ -41,6 +41,10 @@ function App() {
   const [isFeatModalOpen, setIsFeatModalOpen] = useState(false);
   const [isSkillModalOpen, setIsSkillModalOpen] = useState(false);
 
+  // ESTADOS PARA EDICIÓN
+  const [editingItem, setEditingItem] = useState(null);
+  const [editingSpell, setEditingSpell] = useState(null);
+
   const [editModal, setEditModal] = useState({
     isOpen: false,
     title: "",
@@ -204,7 +208,7 @@ function App() {
     setEditModal({ ...editModal, isOpen: false });
   };
 
-  // HANDLERS PARA ARRAYS (Listas)
+  // HANDLERS PARA INVENTARIO
   const handleAddItem = (i) =>
     api.post(`/character/${selectedChar._id}/inventory`, i).then((r) =>
       setSelectedChar({
@@ -212,6 +216,14 @@ function App() {
         inventory: [...selectedChar.inventory, r.data],
       }),
     );
+  const handleUpdateItem = (id, updatedData) => {
+    api.patch(`/character/${selectedChar._id}/inventory/${id}`, updatedData).then(r => {
+      setSelectedChar({
+        ...selectedChar, 
+        inventory: selectedChar.inventory.map(i => i._id === id ? r.data : i)
+      });
+    });
+  };
   const handleDeleteItem = (id) =>
     api.delete(`/character/${selectedChar._id}/inventory/${id}`).then(() =>
       setSelectedChar({
@@ -220,6 +232,7 @@ function App() {
       }),
     );
 
+  // HANDLERS PARA HECHIZOS
   const handleAddSpell = (s) =>
     api.post(`/character/${selectedChar._id}/spells`, s).then((r) =>
       setSelectedChar({
@@ -227,6 +240,14 @@ function App() {
         spells: [...selectedChar.spells, r.data],
       }),
     );
+  const handleUpdateSpell = (id, updatedData) => {
+    api.patch(`/character/${selectedChar._id}/spells/${id}`, updatedData).then(r => {
+      setSelectedChar({
+        ...selectedChar, 
+        spells: selectedChar.spells.map(s => s._id === id ? r.data : s)
+      });
+    });
+  };
   const handleToggleSpell = (id) =>
     api.patch(`/character/${selectedChar._id}/spells/${id}`).then((r) =>
       setSelectedChar({
@@ -242,6 +263,7 @@ function App() {
       }),
     );
 
+  // OTROS HANDLERS
   const handleDeleteNote = (id) =>
     api.delete(`/character/${selectedChar._id}/notes/${id}`).then(() =>
       setSelectedChar({
@@ -255,7 +277,6 @@ function App() {
       setSelectedChar(r.data);
     });
 
-  // HANDLERS DE ARMAS Y ATAQUES
   const handleAddAttack = (a) =>
     api.post(`/character/${selectedChar._id}/attacks`, a).then((r) =>
       setSelectedChar({
@@ -271,7 +292,6 @@ function App() {
       }),
     );
 
-  // HANDLERS DE DOTES Y RASGOS
   const handleAddFeat = (f) =>
     api.post(`/character/${selectedChar._id}/feats`, f).then((r) =>
       setSelectedChar({
@@ -861,11 +881,12 @@ function App() {
                         key={i._id}
                         item={i}
                         onDelete={handleDeleteItem}
+                        onEdit={() => { setEditingItem(i); setIsModalOpen(true); }}
                       />
                     ))}
                   </div>
                   <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
                     className="w-full mt-6 border-2 border-dashed border-slate-800 p-4 rounded-2xl text-slate-600 font-black text-[10px] uppercase hover:bg-slate-900 hover:text-white transition-colors"
                   >
                     + AGREGAR OBJETO
@@ -881,7 +902,7 @@ function App() {
                     Grimorio
                   </h2>
                   <button
-                    onClick={() => setIsSpellModalOpen(true)}
+                    onClick={() => { setEditingSpell(null); setIsSpellModalOpen(true); }}
                     className="bg-cyan-600 px-4 py-1 rounded-full text-[10px] font-black hover:bg-cyan-500 transition-colors"
                   >
                     + APRENDER
@@ -894,6 +915,7 @@ function App() {
                       spell={s}
                       onToggle={handleToggleSpell}
                       onDelete={handleDeleteSpell}
+                      onEdit={() => { setEditingSpell(s); setIsSpellModalOpen(true); }}
                     />
                   ))}
                 </div>
@@ -945,15 +967,20 @@ function App() {
         onClose={() => setIsCharModalOpen(false)}
         onAdd={handleCreateCharacter}
       />
+      
       <AddItemModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => { setIsModalOpen(false); setEditingItem(null); }}
         onAdd={handleAddItem}
+        onEdit={handleUpdateItem}
+        itemToEdit={editingItem}
       />
       <AddSpellModal
         isOpen={isSpellModalOpen}
-        onClose={() => setIsSpellModalOpen(false)}
+        onClose={() => { setIsSpellModalOpen(false); setEditingSpell(null); }}
         onAdd={handleAddSpell}
+        onEdit={handleUpdateSpell}
+        spellToEdit={editingSpell}
       />
       <AddAttackModal
         isOpen={isAttackModalOpen}
@@ -965,7 +992,6 @@ function App() {
         onClose={() => setIsFeatModalOpen(false)}
         onAdd={handleAddFeat}
       />
-      {/* AQUÍ ESTÁ EL MODAL NUEVO QUE FALTABA */}
       <AddSkillModal 
         isOpen={isSkillModalOpen} 
         onClose={() => setIsSkillModalOpen(false)} 

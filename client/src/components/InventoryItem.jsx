@@ -1,46 +1,68 @@
-import { useState } from 'react';
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-export default function InventoryItem({ item, onDelete }) {
+export default function InventoryItem({ item, onDelete, onEdit }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // PARACAÍDAS: Si item no existe, no renderiza nada y evita el pantallazo negro
-  if (!item) return null;
-
   return (
-    <div className="overflow-hidden border border-slate-800 rounded-2xl bg-slate-900/40 mb-3 transition-all">
+    <motion.div 
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden mb-2"
+    >
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full p-4 text-left active:bg-slate-800/50"
+        className="w-full p-3 flex justify-between items-center text-left active:bg-slate-800/50 transition-colors"
       >
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-slate-800 flex items-center justify-center text-lg shadow-inner">
+        <div className="flex items-center gap-3 overflow-hidden">
+          <div className="w-10 h-10 bg-slate-950 rounded-xl flex items-center justify-center text-xl border border-slate-800 flex-shrink-0">
             {item.icon || '📦'}
           </div>
-          <div>
-            <p className="font-black text-white text-sm uppercase leading-none mb-1">{item.name || 'Objeto Desconocido'}</p>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{item.weight || 0} LB</p>
+          <div className="truncate">
+            <h4 className="text-white font-black text-xs uppercase tracking-tighter truncate">{item.name}</h4>
+            <div className="flex gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
+              <span>{item.weight || 0} LBS</span>
+            </div>
           </div>
         </div>
-        <span className={`text-orange-500 text-xs transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+        <motion.span animate={{ rotate: isOpen ? 180 : 0 }} className="text-slate-500 text-xs ml-2 flex-shrink-0">
           ▼
-        </span>
+        </motion.span>
       </button>
 
-      {isOpen && (
-        <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-2 duration-300">
-          <div className="h-[1px] bg-slate-800 mb-3 mx-2" />
-          <p className="px-2 text-xs text-slate-400 leading-relaxed italic mb-4">
-            {item.desc || "Sin descripción."}
-          </p>
-          
-          <button 
-            onClick={() => onDelete(item._id)}
-            className="w-full py-2 bg-red-900/20 border border-red-900/50 rounded-lg text-[10px] font-black text-red-500 uppercase tracking-tighter active:scale-95 transition-all"
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            className="px-4 pb-4"
           >
-            🗑️ Tirar Objeto
-          </button>
-        </div>
-      )}
-    </div>
+            <div className="h-[1px] bg-slate-800 w-full mb-3" />
+            
+            {item.desc ? (
+              <p className="text-xs text-slate-400 leading-relaxed italic mb-4">{item.desc}</p>
+            ) : (
+              <p className="text-xs text-slate-600 leading-relaxed italic mb-4">Sin descripción...</p>
+            )}
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={onEdit}
+                className="flex-1 py-2 bg-cyan-950/30 border border-cyan-900/50 rounded-xl text-[10px] font-black text-cyan-500 uppercase active:scale-95 transition-transform"
+              >
+                ✎ Editar
+              </button>
+              <button 
+                onClick={() => onDelete(item._id)}
+                className="flex-1 py-2 bg-red-950/30 border border-red-900/50 rounded-xl text-[10px] font-black text-red-500 uppercase active:scale-95 transition-transform"
+              >
+                🗑️ Tirar
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

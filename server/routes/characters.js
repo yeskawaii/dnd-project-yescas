@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 2. POST: Crear personaje (CORREGIDO)
+// 2. POST: Crear personaje
 router.post('/', async (req, res) => {
   try {
     const { name, charClass, stats } = req.body;
@@ -27,10 +27,8 @@ router.post('/', async (req, res) => {
       class: charClass || "Guerrero", 
       level: 1,
       race: "Humano",
-      // --- AQUÍ ESTABA EL ERROR: Solo el valor, no la definición del tipo ---
       experience: 0, 
       physicalWeight: 150, 
-      // --------------------------------------------------------------------
       alignment: "N",
       deity: "Ninguna",
       baseAttack: 0,
@@ -70,11 +68,11 @@ router.delete('/:charId', async (req, res) => {
 });
 
 // 4. PATCH: ACTUALIZACIÓN MAESTRA (Dinámica)
-router.patch('/:id/update', async (req, res) => {
+router.patch('/:charId/update', async (req, res) => {
   try {
     const updates = req.body;
     const updatedChar = await Character.findByIdAndUpdate(
-      req.params.id,
+      req.params.charId,
       { $set: updates },
       { new: true, runValidators: true }
     );
@@ -96,6 +94,20 @@ router.post('/:charId/inventory', async (req, res) => {
     res.status(201).json(char.inventory[char.inventory.length - 1]);
   } catch (err) { 
     res.status(400).json({ error: "No se pudo guardar el ítem" }); 
+  }
+});
+
+router.patch('/:charId/inventory/:itemId', async (req, res) => {
+  try {
+    const char = await Character.findOne({ _id: req.params.charId, user: req.user });
+    const item = char.inventory.id(req.params.itemId);
+    if (!item) return res.status(404).json({ message: 'Objeto no encontrado' });
+    
+    Object.assign(item, req.body);
+    await char.save();
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al actualizar objeto' });
   }
 });
 
@@ -122,16 +134,27 @@ router.post('/:charId/spells', async (req, res) => {
   }
 });
 
+// UNIFICADA: Editar hechizo O Preparar hechizo
 router.patch('/:charId/spells/:spellId', async (req, res) => {
-    try {
-      const char = await Character.findOne({ _id: req.params.charId, user: req.user });
-      const spell = char.spells.id(req.params.spellId);
+  try {
+    const char = await Character.findOne({ _id: req.params.charId, user: req.user });
+    const spell = char.spells.id(req.params.spellId);
+    
+    if (!spell) return res.status(404).json({ message: 'Hechizo no encontrado' });
+    
+    // Si la petición viene sin datos, es el botón de Preparar (Toggle)
+    if (Object.keys(req.body).length === 0) {
       spell.prepared = !spell.prepared;
-      await char.save();
-      res.json(spell);
-    } catch (err) {
-      res.status(400).json({ error: "No se pudo cambiar el estado" });
+    } else {
+      // Si trae datos (desde el modal), actualiza los valores
+      Object.assign(spell, req.body);
     }
+    
+    await char.save();
+    res.json(spell);
+  } catch (err) {
+    res.status(500).json({ error: "No se pudo actualizar el hechizo" });
+  }
 });
 
 router.delete('/:charId/spells/:spellId', async (req, res) => {
@@ -146,10 +169,10 @@ router.delete('/:charId/spells/:spellId', async (req, res) => {
 });
 
 // --- NOTAS ---
-router.post('/:id/notes', async (req, res) => {
+router.post('/:charId/notes', async (req, res) => {
   try {
     const { title, content, color } = req.body;
-    const char = await Character.findById(req.params.id);
+    const char = await Character.findById(req.params.charId);
     char.notes.push({ title, content, color: color || 'cyan' });
     await char.save();
     res.json(char.notes[char.notes.length - 1]);
@@ -169,46 +192,38 @@ router.delete('/:charId/notes/:noteId', async (req, res) => {
   }
 });
 
-// 🗡️ AGREGAR UN ARMA/ATAQUE
-router.post('/:id/attacks', async (req, res) => {
+// 🗡️ ARMAS Y ATAQUES
+router.post('/:charId/attacks', async (req, res) => {
   try {
-    const character = await Character.findById(req.params.id);
+    const character = await Character.findById(req.params.charId);
     if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
 
-    // Mete el arma nueva al arreglo
     character.attacks.push(req.body);
     await character.save();
-
-    // Regresa el último elemento (el arma que se acaba de crear con su _id nuevo)
     const newAttack = character.attacks[character.attacks.length - 1];
     res.status(201).json(newAttack);
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: 'Error en la forja (DB Error)' });
   }
 });
 
-// 🗑️ ELIMINAR UN ARMA/ATAQUE
-router.delete('/:id/attacks/:attackId', async (req, res) => {
+router.delete('/:charId/attacks/:attackId', async (req, res) => {
   try {
-    const character = await Character.findById(req.params.id);
+    const character = await Character.findById(req.params.charId);
     if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
 
-    // Saca el arma del arreglo usando su ID
     character.attacks.pull(req.params.attackId);
     await character.save();
-
     res.status(200).json({ message: 'Arma destruida exitosamente' });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: 'Error al tirar el arma' });
   }
 });
 
-// 🌟 AGREGAR UNA DOTE/RASGO
-router.post('/:id/feats', async (req, res) => {
+// 🌟 DOTES Y RASGOS
+router.post('/:charId/feats', async (req, res) => {
   try {
-    const character = await Character.findById(req.params.id);
+    const character = await Character.findById(req.params.charId);
     if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
 
     character.feats.push(req.body);
@@ -219,10 +234,9 @@ router.post('/:id/feats', async (req, res) => {
   }
 });
 
-// 🗑️ ELIMINAR UNA DOTE/RASGO
-router.delete('/:id/feats/:featId', async (req, res) => {
+router.delete('/:charId/feats/:featId', async (req, res) => {
   try {
-    const character = await Character.findById(req.params.id);
+    const character = await Character.findById(req.params.charId);
     if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
 
     character.feats.pull(req.params.featId);
