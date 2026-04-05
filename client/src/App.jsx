@@ -21,6 +21,7 @@ import AttackCard from "./components/AttackCard";
 import AddAttackModal from "./components/AddAttackModal";
 import FeatCard from "./components/FeatCard";
 import AddFeatModal from "./components/AddFeatModal";
+import AddSkillModal from "./components/AddSkillModal";
 
 // --- UTILIDADES DE CONVERSIÓN ---
 import { lbToKg, kgToLb, inToCm, cmToIn } from "./utils/conversions";
@@ -38,6 +39,7 @@ function App() {
   const [isSpellModalOpen, setIsSpellModalOpen] = useState(false);
   const [isAttackModalOpen, setIsAttackModalOpen] = useState(false);
   const [isFeatModalOpen, setIsFeatModalOpen] = useState(false);
+  const [isSkillModalOpen, setIsSkillModalOpen] = useState(false);
 
   const [editModal, setEditModal] = useState({
     isOpen: false,
@@ -101,10 +103,10 @@ function App() {
     switch (t) {
       case "name":
         updateData = { name: valToSave };
-        break; // EDITAR NOMBRE
+        break; 
       case "class":
         updateData = { class: valToSave };
-        break; // EDITAR CLASE
+        break; 
       case "race":
       case "alignment":
       case "deity":
@@ -616,7 +618,7 @@ function App() {
                     ))}
                   </div>
 
-                  {/* ARMAS Y ATAQUES <-- NUEVO */}
+                  {/* ARMAS Y ATAQUES */}
                   <div className="mt-6 pt-4 border-t border-slate-800">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
@@ -678,9 +680,10 @@ function App() {
                   <div className="mt-2">
                     <SkillTable
                       character={selectedChar}
-                      onUpdateSkill={(newSkillsArray) => {
-                        handleUpdateCharacter({ skills: newSkillsArray });
-                      }}
+                      onUpdateSkill={(newSkillsArray) =>
+                        handleUpdateCharacter({ skills: newSkillsArray })
+                      }
+                      onOpenAddModal={() => setIsSkillModalOpen(true)}
                     />
                   </div>
                 </CollapsibleSection>
@@ -926,6 +929,7 @@ function App() {
           </motion.div>
         </AnimatePresence>
       </main>
+      
       {/* MODALES REUNIDOS */}
       <UpdateValueModal
         isOpen={editModal.isOpen}
@@ -960,6 +964,15 @@ function App() {
         isOpen={isFeatModalOpen}
         onClose={() => setIsFeatModalOpen(false)}
         onAdd={handleAddFeat}
+      />
+      {/* AQUÍ ESTÁ EL MODAL NUEVO QUE FALTABA */}
+      <AddSkillModal 
+        isOpen={isSkillModalOpen} 
+        onClose={() => setIsSkillModalOpen(false)} 
+        onAdd={(newSkill) => {
+          const updatedSkills = [...(selectedChar.skills || []), newSkill];
+          handleUpdateCharacter({ skills: updatedSkills });
+        }} 
       />
 
       {/* NAV FLOTANTE ESTILO CELULAR */}
