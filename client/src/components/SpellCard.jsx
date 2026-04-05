@@ -1,60 +1,64 @@
-const SpellCard = ({ spell, onToggle, onDelete }) => {
-  // Colores por escuela de magia 3.5
-  const schoolColors = {
-    Evocación: "border-red-500/50 text-red-400 shadow-red-900/20",
-    Necromancia: "border-purple-600/50 text-purple-400 shadow-purple-900/20",
-    Abjuración: "border-blue-500/50 text-blue-400 shadow-blue-900/20",
-    Conjuración: "border-yellow-500/50 text-yellow-400 shadow-yellow-900/20",
-    Ilusión: "border-pink-500/50 text-pink-400 shadow-pink-900/20",
-    Encantamiento: "border-green-500/50 text-green-400 shadow-green-900/20",
-    Adivinación: "border-cyan-400/50 text-cyan-300 shadow-cyan-900/20",
-    Transmutación: "border-orange-500/50 text-orange-400 shadow-orange-900/20"
-  };
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-  const currentColor = schoolColors[spell.school] || "border-slate-700 text-slate-400";
+export default function SpellCard({ spell, onToggle, onDelete, onEdit }) {
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className={`bg-slate-900/50 border ${currentColor} p-4 rounded-2xl shadow-lg transition-all active:scale-[0.98]`}>
-      <div className="flex justify-between items-start">
-        <div className="flex-1 cursor-pointer" onClick={() => onToggle(spell._id)}>
-          <div className="flex items-center gap-2">
-            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border ${currentColor} uppercase tracking-widest`}>
-              Niv {spell.level}
-            </span>
-            <h3 className={`font-black uppercase tracking-tighter text-sm ${spell.prepared ? 'line-through opacity-40' : 'opacity-100'}`}>
-              {spell.name}
-            </h3>
-          </div>
-          <p className="text-[9px] font-bold opacity-60 mt-1 italic uppercase tracking-widest">
-            Escuela: {spell.school}
-          </p>
-        </div>
-
+    <motion.div 
+      layout
+      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+      className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden mb-2"
+    >
+      <div className="flex justify-between items-center pr-2">
         <button 
-          onClick={() => onDelete(spell._id)}
-          className="text-slate-700 hover:text-red-500 transition-colors ml-2"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex-1 p-3 flex items-center gap-3 text-left active:bg-slate-800/50 transition-colors"
         >
-          ✕
+          <div className={`w-8 h-8 rounded-full border flex items-center justify-center shadow-inner flex-shrink-0 ${spell.prepared ? 'bg-cyan-900/30 border-cyan-500/50 text-cyan-400' : 'bg-slate-950 border-slate-700 text-slate-600'}`}>
+            <span className="text-xs font-black">N{spell.level}</span>
+          </div>
+          <div className="truncate">
+            <h4 className={`font-black text-xs uppercase tracking-tighter truncate ${spell.prepared ? 'text-white' : 'text-slate-400'}`}>{spell.name}</h4>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{spell.school}</p>
+          </div>
+        </button>
+
+        {/* SWITCH PREPARADO */}
+        <button 
+          onClick={() => onToggle(spell._id)}
+          className={`w-10 h-5 rounded-full relative transition-colors mr-2 ${spell.prepared ? 'bg-cyan-600' : 'bg-slate-800'}`}
+        >
+          <motion.div layout className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 ${spell.prepared ? 'right-1' : 'left-1'}`} />
         </button>
       </div>
 
-      {/* Descripción expandible (puedes añadir lógica de estado para mostrar/ocultar si quieres) */}
-      {spell.desc && (
-        <div className="mt-3 pt-3 border-t border-slate-800/50">
-          <p className="text-[10px] text-slate-400 leading-relaxed normal-case italic">
-            {spell.desc}
-          </p>
-        </div>
-      )}
-
-      {/* Indicador de "Preparado" o "Lanzado" */}
-      <div className="mt-2 flex justify-end">
-        <span className={`text-[8px] font-black ${spell.prepared ? 'text-green-500' : 'text-slate-600'}`}>
-          {spell.prepared ? "● CONJURO LANZADO" : "○ DISPONIBLE"}
-        </span>
-      </div>
-    </div>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            className="px-4 pb-4"
+          >
+            <div className="h-[1px] bg-slate-800 w-full mb-3" />
+            <p className="text-xs text-slate-400 leading-relaxed italic mb-4">{spell.desc}</p>
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={onEdit}
+                className="flex-1 py-2 bg-cyan-950/30 border border-cyan-900/50 rounded-xl text-[10px] font-black text-cyan-500 uppercase active:scale-95 transition-transform"
+              >
+                ✎ Editar
+              </button>
+              <button 
+                onClick={() => onDelete(spell._id)}
+                className="flex-1 py-2 bg-red-950/30 border border-red-900/50 rounded-xl text-[10px] font-black text-red-500 uppercase active:scale-95 transition-transform"
+              >
+                🗑️ Olvidar
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
-};
-
-export default SpellCard;
+}
