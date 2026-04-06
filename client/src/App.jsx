@@ -32,6 +32,7 @@ function App() {
   const [selectedChar, setSelectedChar] = useState(null);
   const [activeTab, setActiveTab] = useState("stats");
   const [unitSystem, setUnitSystem] = useState("imp");
+  const [spellSortBy, setSpellSortBy] = useState("level");
 
   // ESTADOS PARA LOS MODALES
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -910,32 +911,59 @@ function App() {
               </div>
             )}
 
-            {activeTab === "spells" && (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-black text-white italic tracking-tighter">
-                    Grimorio
-                  </h2>
-                  <button
-                    onClick={() => { setEditingSpell(null); setIsSpellModalOpen(true); }}
-                    className="bg-cyan-600 px-4 py-1 rounded-full text-[10px] font-black hover:bg-cyan-500 transition-colors"
-                  >
-                    + APRENDER
-                  </button>
+            {activeTab === "spells" && (() => {
+              // Lógica para ordenar los hechizos antes de dibujarlos
+              const sortedSpells = [...(selectedChar.spells || [])].sort((a, b) => {
+                if (spellSortBy === 'alpha') return a.name.localeCompare(b.name);
+                // Si es por nivel, ordena por nivel y luego alfabético si son del mismo nivel
+                if (a.level === b.level) return a.name.localeCompare(b.name);
+                return a.level - b.level;
+              });
+
+              return (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-black text-white italic tracking-tighter">
+                      Grimorio
+                    </h2>
+                    <button
+                      onClick={() => { setEditingSpell(null); setIsSpellModalOpen(true); }}
+                      className="bg-cyan-600 px-4 py-1 rounded-full text-[10px] font-black hover:bg-cyan-500 transition-colors"
+                    >
+                      + APRENDER
+                    </button>
+                  </div>
+
+                  {/* CONTROLES DE ORDENAMIENTO */}
+                  <div className="flex gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800 w-max mb-4">
+                    <button 
+                      onClick={() => setSpellSortBy('level')} 
+                      className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-colors ${spellSortBy === 'level' ? 'bg-cyan-600/20 text-cyan-500' : 'text-slate-500'}`}
+                    >
+                      Nivel
+                    </button>
+                    <button 
+                      onClick={() => setSpellSortBy('alpha')} 
+                      className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-colors ${spellSortBy === 'alpha' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}
+                    >
+                      A-Z
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 pb-10">
+                    {sortedSpells.map((s) => (
+                      <SpellCard
+                        key={s._id}
+                        spell={s}
+                        onToggle={handleToggleSpell}
+                        onDelete={handleDeleteSpell}
+                        onEdit={() => { setEditingSpell(s); setIsSpellModalOpen(true); }}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-2 pb-10">
-                  {selectedChar.spells?.map((s) => (
-                    <SpellCard
-                      key={s._id}
-                      spell={s}
-                      onToggle={handleToggleSpell}
-                      onDelete={handleDeleteSpell}
-                      onEdit={() => { setEditingSpell(s); setIsSpellModalOpen(true); }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {activeTab === "notes" && (
               <div>
