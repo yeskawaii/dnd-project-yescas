@@ -182,6 +182,21 @@ function App() {
           );
         setEditModal({ ...editModal, isOpen: false });
         return;
+      case "edit_note":
+        api
+          .patch(`/character/${selectedChar._id}/notes/${editModal.statName}`, {
+            content: valToSave,
+          })
+          .then((res) =>
+            setSelectedChar({
+              ...selectedChar,
+              notes: selectedChar.notes.map((n) =>
+                n._id === editModal.statName ? res.data : n
+              ),
+            })
+          );
+        setEditModal({ ...editModal, isOpen: false });
+        return;
       case "cp":
         updateData = {
           money: { ...selectedChar.money, cp: Number(valToSave) },
@@ -943,6 +958,9 @@ function App() {
                       key={n._id}
                       note={n}
                       onDelete={handleDeleteNote}
+                      onEdit={() =>
+                        openEdit("Editar Nota", "CONTENIDO DE LA NOTA", n.content, "edit_note", n._id)
+                      }
                     />
                   ))}
                 </div>

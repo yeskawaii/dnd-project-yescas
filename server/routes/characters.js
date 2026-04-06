@@ -247,4 +247,19 @@ router.delete('/:charId/feats/:featId', async (req, res) => {
   }
 });
 
+// 📝 EDITAR NOTA
+router.patch('/:charId/notes/:noteId', async (req, res) => {
+  try {
+    const char = await Character.findOne({ _id: req.params.charId, user: req.user });
+    const note = char.notes.id(req.params.noteId);
+    if (!note) return res.status(404).json({ message: 'Nota no encontrada' });
+    
+    Object.assign(note, req.body);
+    await char.save();
+    res.json(note);
+  } catch (err) {
+    res.status(500).json({ error: "Error al actualizar nota" });
+  }
+});
+
 export default router;
