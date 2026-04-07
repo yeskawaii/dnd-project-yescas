@@ -490,90 +490,84 @@ function App() {
                     </div>
                   </CollapsibleSection>
 
-                  {/* GRID PARA PANTALLAS GRANDES (PC/TABLET) */}
+                  {/* GRID PARA PANTALLAS GRANDES (PC/TABLET) - AHORA ES UN GRID PLANO */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mt-6">
                     
-                    {/* COLUMNA IZQUIERDA */}
-                    <div className="space-y-6">
-                      {/* 2. COMBATE */}
-                      <CollapsibleSection title="Estadísticas de Combate" defaultOpen={true}>
-                        <div className="grid grid-cols-3 gap-3 mb-4">
-                          <div onClick={() => openEdit("Armadura", "EQUIPO (ARMADURA+ESCUDO)", selectedChar.armorClass?.armor, "ca_armor")} className="bg-slate-900 border border-cyan-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800 transition-colors">
-                            <p className="text-[8px] font-black text-cyan-400 mb-1">C. ARMADURA</p>
-                            <span className="text-3xl font-black text-white">{totalCA}</span>
-                            <div className="flex items-center justify-center gap-1 mt-1 opacity-40"><span className="text-[7px] font-bold text-slate-300">10+{selectedChar.armorClass?.armor || 0}+{dexMod}</span></div>
-                          </div>
-                          <div onClick={() => openEdit("Ataque Base", "VALOR BAB", selectedChar.baseAttack, "bab")} className="bg-slate-900 border border-orange-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer flex flex-col justify-center hover:bg-slate-800 transition-colors">
-                            <p className="text-[8px] font-black text-orange-400 mb-1">BAB</p>
-                            <span className="text-2xl font-black text-white">+{selectedChar.baseAttack || 0}</span>
-                          </div>
-                          <div onClick={() => openEdit("Iniciativa", "BONOS MISC", selectedChar.initiativeMisc, "init_misc")} className="bg-slate-900 border border-purple-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800 transition-colors">
-                            <p className="text-[8px] font-black text-purple-400 mb-1 tracking-tighter">INICIATIVA</p>
-                            <span className="text-2xl font-black text-white">{dexMod + (selectedChar.initiativeMisc || 0) >= 0 ? "+" : ""}{dexMod + (selectedChar.initiativeMisc || 0)}</span>
-                            <p className="text-[7px] font-bold text-slate-500 mt-1 uppercase tracking-tighter">DEX {dexMod} + {selectedChar.initiativeMisc || 0}</p>
-                          </div>
+                    {/* 1. COMBATE (PC: Izquierda Arriba | Celular: 1) */}
+                    <CollapsibleSection title="Estadísticas de Combate" defaultOpen={true}>
+                      <div className="grid grid-cols-3 gap-3 mb-4">
+                        <div onClick={() => openEdit("Armadura", "EQUIPO (ARMADURA+ESCUDO)", selectedChar.armorClass?.armor, "ca_armor")} className="bg-slate-900 border border-cyan-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800 transition-colors">
+                          <p className="text-[8px] font-black text-cyan-400 mb-1">C. ARMADURA</p>
+                          <span className="text-3xl font-black text-white">{totalCA}</span>
+                          <div className="flex items-center justify-center gap-1 mt-1 opacity-40"><span className="text-[7px] font-bold text-slate-300">10+{selectedChar.armorClass?.armor || 0}+{dexMod}</span></div>
                         </div>
+                        <div onClick={() => openEdit("Ataque Base", "VALOR BAB", selectedChar.baseAttack, "bab")} className="bg-slate-900 border border-orange-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer flex flex-col justify-center hover:bg-slate-800 transition-colors">
+                          <p className="text-[8px] font-black text-orange-400 mb-1">BAB</p>
+                          <span className="text-2xl font-black text-white">+{selectedChar.baseAttack || 0}</span>
+                        </div>
+                        <div onClick={() => openEdit("Iniciativa", "BONOS MISC", selectedChar.initiativeMisc, "init_misc")} className="bg-slate-900 border border-purple-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800 transition-colors">
+                          <p className="text-[8px] font-black text-purple-400 mb-1 tracking-tighter">INICIATIVA</p>
+                          <span className="text-2xl font-black text-white">{dexMod + (selectedChar.initiativeMisc || 0) >= 0 ? "+" : ""}{dexMod + (selectedChar.initiativeMisc || 0)}</span>
+                          <p className="text-[7px] font-bold text-slate-500 mt-1 uppercase tracking-tighter">DEX {dexMod} + {selectedChar.initiativeMisc || 0}</p>
+                        </div>
+                      </div>
 
-                        {/* SALVACIONES */}
-                        <div className="flex gap-2">
-                          {["fort", "ref", "will"].map((s) => (
-                            <div key={s} onClick={() => openEdit(`Salvación ${s}`, s.toUpperCase(), selectedChar.saves?.[s], `save_${s}`)} className={`flex-1 bg-slate-900/80 p-3 rounded-3xl border border-slate-800 text-center cursor-pointer hover:bg-slate-800 transition-colors`}>
-                              <span className="text-[7px] block font-black text-slate-600">{s.toUpperCase()}</span>
-                              <span className={`font-black text-sm ${s === "fort" ? "text-red-400" : s === "ref" ? "text-blue-400" : "text-purple-400"}`}>+{selectedChar.saves?.[s] || 0}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* ARMAS Y ATAQUES */}
-                        <div className="mt-6 pt-4 border-t border-slate-800">
-                          <div className="flex justify-between items-center mb-3">
-                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Armas Equipadas</h3>
-                            <button onClick={() => setIsAttackModalOpen(true)} className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-2 py-1 rounded hover:bg-orange-500/20 transition-colors">+ AGREGAR</button>
+                      {/* SALVACIONES */}
+                      <div className="flex gap-2">
+                        {["fort", "ref", "will"].map((s) => (
+                          <div key={s} onClick={() => openEdit(`Salvación ${s}`, s.toUpperCase(), selectedChar.saves?.[s], `save_${s}`)} className={`flex-1 bg-slate-900/80 p-3 rounded-3xl border border-slate-800 text-center cursor-pointer hover:bg-slate-800 transition-colors`}>
+                            <span className="text-[7px] block font-black text-slate-600">{s.toUpperCase()}</span>
+                            <span className={`font-black text-sm ${s === "fort" ? "text-red-400" : s === "ref" ? "text-blue-400" : "text-purple-400"}`}>+{selectedChar.saves?.[s] || 0}</span>
                           </div>
-                          <div className="space-y-2">
-                            {selectedChar.attacks?.length > 0 ? (
-                              selectedChar.attacks.map((atk) => <AttackCard key={atk._id} attack={atk} character={selectedChar} onDelete={handleDeleteAttack} />)
-                            ) : (
-                              <p className="text-center text-[10px] text-slate-600 italic py-4">Desarmado. Usa los puños.</p>
-                            )}
-                          </div>
-                        </div>
-                      </CollapsibleSection>
+                        ))}
+                      </div>
 
-                      {/* 3. ATRIBUTOS (STATS) */}
-                      <CollapsibleSection title="Atributos Base">
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-10 justify-items-center mt-6">
-                          {Object.entries(selectedChar.stats || {}).map(([stat, val]) => (
-                            <StatCard key={stat} label={stat} value={val} onClick={() => openEdit(`Ajustar ${stat}`, "VALOR ATRIBUTO", val, "stat", stat)} />
-                          ))}
+                      {/* ARMAS Y ATAQUES */}
+                      <div className="mt-6 pt-4 border-t border-slate-800">
+                        <div className="flex justify-between items-center mb-3">
+                          <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Armas Equipadas</h3>
+                          <button onClick={() => setIsAttackModalOpen(true)} className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-2 py-1 rounded hover:bg-orange-500/20 transition-colors">+ AGREGAR</button>
                         </div>
-                      </CollapsibleSection>
-                    </div>
-
-                    {/* COLUMNA DERECHA */}
-                    <div className="space-y-6">
-                      {/* 4. HABILIDADES (SKILLS) */}
-                      <CollapsibleSection title="Habilidades (Skills)">
-                        <div className="mt-2 md:max-h-[500px] md:overflow-y-auto pr-1 custom-scrollbar">
-                          <SkillTable character={selectedChar} onUpdateSkill={(newSkillsArray) => handleUpdateCharacter({ skills: newSkillsArray })} onOpenAddModal={() => setIsSkillModalOpen(true)} />
-                        </div>
-                      </CollapsibleSection>
-
-                      {/* 5. DOTES Y RASGOS */}
-                      <CollapsibleSection title="Dotes y Rasgos">
-                        <div className="flex justify-between items-center mb-3 mt-2">
-                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Habilidades Pasivas</span>
-                          <button onClick={() => setIsFeatModalOpen(true)} className="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded hover:bg-emerald-500/20 transition-colors">+ AGREGAR DOTE</button>
-                        </div>
-                        <div className="space-y-1">
-                          {selectedChar.feats?.length > 0 ? (
-                            selectedChar.feats.map((f) => <FeatCard key={f._id} feat={f} onDelete={handleDeleteFeat} />)
+                        <div className="space-y-2">
+                          {selectedChar.attacks?.length > 0 ? (
+                            selectedChar.attacks.map((atk) => <AttackCard key={atk._id} attack={atk} character={selectedChar} onDelete={handleDeleteAttack} />)
                           ) : (
-                            <p className="text-center text-[10px] text-slate-600 italic py-4">Sin dotes registradas.</p>
+                            <p className="text-center text-[10px] text-slate-600 italic py-4">Desarmado. Usa los puños.</p>
                           )}
                         </div>
-                      </CollapsibleSection>
-                    </div>
+                      </div>
+                    </CollapsibleSection>
+
+                    {/* 2. ATRIBUTOS (PC: Derecha Arriba | Celular: 2) */}
+                    <CollapsibleSection title="Atributos Base">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-10 justify-items-center mt-6">
+                        {Object.entries(selectedChar.stats || {}).map(([stat, val]) => (
+                          <StatCard key={stat} label={stat} value={val} onClick={() => openEdit(`Ajustar ${stat}`, "VALOR ATRIBUTO", val, "stat", stat)} />
+                        ))}
+                      </div>
+                    </CollapsibleSection>
+
+                    {/* 3. HABILIDADES (PC: Izquierda Abajo | Celular: 3) */}
+                    <CollapsibleSection title="Habilidades (Skills)">
+                      <div className="mt-2 md:max-h-[500px] md:overflow-y-auto pr-1 custom-scrollbar">
+                        <SkillTable character={selectedChar} onUpdateSkill={(newSkillsArray) => handleUpdateCharacter({ skills: newSkillsArray })} onOpenAddModal={() => setIsSkillModalOpen(true)} />
+                      </div>
+                    </CollapsibleSection>
+
+                    {/* 4. DOTES Y RASGOS (PC: Derecha Abajo | Celular: 4) */}
+                    <CollapsibleSection title="Dotes y Rasgos">
+                      <div className="flex justify-between items-center mb-3 mt-2">
+                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Habilidades Pasivas</span>
+                        <button onClick={() => setIsFeatModalOpen(true)} className="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded hover:bg-emerald-500/20 transition-colors">+ AGREGAR DOTE</button>
+                      </div>
+                      <div className="space-y-1">
+                        {selectedChar.feats?.length > 0 ? (
+                          selectedChar.feats.map((f) => <FeatCard key={f._id} feat={f} onDelete={handleDeleteFeat} />)
+                        ) : (
+                          <p className="text-center text-[10px] text-slate-600 italic py-4">Sin dotes registradas.</p>
+                        )}
+                      </div>
+                    </CollapsibleSection>
 
                   </div>
 
