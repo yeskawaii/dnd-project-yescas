@@ -385,7 +385,7 @@ function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans uppercase relative">
       <Toaster position="top-center" richColors theme="dark" />
       
-      {/* 🛠️ ARREGLO #1: Header sólido y con z-50 para que no se trasparente ni encime */}
+      {/* HEADER TOTALMENTE EDITABLE */}
       <header className="px-6 py-4 pt-10 sticky top-0 z-50 bg-slate-950 border-b border-slate-800 flex justify-between items-center shadow-md">
         <div className="flex items-center gap-3 w-full">
           <div className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-full flex items-center justify-center text-xl shadow-inner flex-shrink-0">
@@ -413,17 +413,16 @@ function App() {
           </div>
         </div>
         <div className="flex gap-2 ml-2 flex-shrink-0">
-          <button onClick={() => setSelectedChar(null)} className="w-8 h-8 bg-slate-900 rounded-xl border border-slate-800 text-slate-400 flex items-center justify-center text-xs active:scale-95">🔄</button>
-          <button onClick={logout} className="w-8 h-8 bg-red-950/30 rounded-xl border border-red-900/50 text-red-500 flex items-center justify-center text-xs active:scale-95">🚪</button>
+          <button onClick={() => setSelectedChar(null)} className="w-8 h-8 bg-slate-900 rounded-xl border border-slate-800 text-slate-400 flex items-center justify-center text-xs active:scale-95 transition-colors hover:bg-slate-800">🔄</button>
+          <button onClick={logout} className="w-8 h-8 bg-red-950/30 rounded-xl border border-red-900/50 text-red-500 flex items-center justify-center text-xs active:scale-95 transition-colors hover:bg-red-900/50">🚪</button>
         </div>
       </header>
 
-      {/* CONTENEDOR FLEX PARA RESPONSIVE (CELULAR VS PC) */}
-      <div className="flex flex-col-reverse md:flex-row max-w-7xl mx-auto w-full gap-6 px-4 mt-8">
+      {/* CONTENEDOR PRINCIPAL CENTRADO */}
+      <div className="max-w-5xl mx-auto w-full px-4 mt-6">
         
-        {/* NAV (ABAJO EN CELULAR, A LA IZQUIERDA EN PC) */}
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-slate-900/80 backdrop-blur-2xl border border-white/10 px-6 py-3 flex justify-between items-center z-40 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] 
-                        md:sticky md:top-32 md:left-0 md:translate-x-0 md:w-24 md:flex-col md:justify-start md:gap-8 md:py-8 md:h-[calc(100vh-140px)]">
+        {/* NAV ESCRITORIO (Horizontal, centrado, solo visible en PC/Tablet) */}
+        <nav className="hidden md:flex justify-center gap-2 mb-8 bg-slate-900/50 p-2 rounded-2xl border border-slate-800 w-max mx-auto shadow-lg backdrop-blur-sm">
           {[
             { id: "stats", icon: "⚔️", label: "Stats" },
             { id: "inv", icon: "🎒", label: "Mochila" },
@@ -433,29 +432,28 @@ function App() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative flex flex-col items-center transition-all duration-300 ${activeTab === tab.id ? "text-cyan-400 scale-110" : "text-slate-500"}`}
+              className={`relative flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-black tracking-widest text-xs uppercase ${
+                activeTab === tab.id ? "text-cyan-400 bg-cyan-500/10" : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+              }`}
             >
+              <span className="text-lg z-10">{tab.icon}</span>
+              <span className="z-10">{tab.label}</span>
               {activeTab === tab.id && (
-                <motion.div layoutId="glow" className="absolute -top-1 w-10 h-10 bg-cyan-500/10 blur-xl rounded-full" />
+                <motion.div layoutId="desktop-glow" className="absolute inset-0 border border-cyan-500/30 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.15)]" />
               )}
-              <span className="text-xl z-10">{tab.icon}</span>
-              <span className="text-[8px] font-black uppercase mt-1 tracking-widest md:block hidden">
-                {tab.label}
-              </span>
             </button>
           ))}
         </nav>
 
-        {/* CONTENIDO PRINCIPAL */}
-        <main className="flex-1 w-full pb-32 md:pb-8">
+        {/* CONTENIDO DE LAS PESTAÑAS */}
+        <main className="w-full pb-32 md:pb-12">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="max-w-4xl mx-auto"
             >
               {activeTab === "stats" && (
                 <div className="space-y-4">
@@ -472,20 +470,20 @@ function App() {
                   {/* 1. BIOGRAFÍA Y FÍSICO */}
                   <CollapsibleSection title="Biografía y Físico">
                     <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                      <button onClick={() => setUnitSystem(unitSystem === "imp" ? "metric" : "imp")} className="bg-orange-600/20 border border-orange-500/40 px-3 py-2 rounded-2xl text-[8px] font-black text-orange-500 flex-shrink-0">
+                      <button onClick={() => setUnitSystem(unitSystem === "imp" ? "metric" : "imp")} className="bg-orange-600/20 border border-orange-500/40 px-3 py-2 rounded-2xl text-[8px] font-black text-orange-500 flex-shrink-0 hover:bg-orange-600/30 transition-colors">
                         MODO: {unitSystem === "imp" ? "LB/FT" : "KG/CM"}
                       </button>
                       {["race", "alignment", "deity"].map((f) => (
-                        <div key={f} onClick={() => openEdit(`Cambiar ${f}`, f.toUpperCase(), selectedChar[f], f)} className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800">
+                        <div key={f} onClick={() => openEdit(`Cambiar ${f}`, f.toUpperCase(), selectedChar[f], f)} className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800 transition-colors">
                           <p className="text-[7px] font-black text-slate-600 uppercase">{f}</p>
                           <p className="text-xs font-bold text-white">{selectedChar[f] || "---"}</p>
                         </div>
                       ))}
-                      <div onClick={() => openEdit("Altura", "CM O PULGADAS", selectedChar.height, "height")} className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800">
+                      <div onClick={() => openEdit("Altura", "CM O PULGADAS", selectedChar.height, "height")} className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800 transition-colors">
                         <p className="text-[7px] font-black text-slate-600 uppercase">Estatura</p>
                         <p className="text-xs font-bold text-white">{unitSystem === "imp" ? `${selectedChar.height || 0}"` : `${inToCm(selectedChar.height || 0)} cm`}</p>
                       </div>
-                      <div onClick={() => openEdit("Peso Corporal", "PESO SIN EQUIPO", selectedChar.physicalWeight, "physicalWeight")} className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800">
+                      <div onClick={() => openEdit("Peso Corporal", "PESO SIN EQUIPO", selectedChar.physicalWeight, "physicalWeight")} className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800 transition-colors">
                         <p className="text-[7px] font-black text-slate-600 uppercase">Peso Pers.</p>
                         <p className="text-xs font-bold text-orange-400">{unitSystem === "imp" ? `${selectedChar.physicalWeight || 0} lb` : `${lbToKg(selectedChar.physicalWeight || 0)} kg`}</p>
                       </div>
@@ -500,16 +498,16 @@ function App() {
                       {/* 2. COMBATE */}
                       <CollapsibleSection title="Estadísticas de Combate" defaultOpen={true}>
                         <div className="grid grid-cols-3 gap-3 mb-4">
-                          <div onClick={() => openEdit("Armadura", "EQUIPO (ARMADURA+ESCUDO)", selectedChar.armorClass?.armor, "ca_armor")} className="bg-slate-900 border border-cyan-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800">
+                          <div onClick={() => openEdit("Armadura", "EQUIPO (ARMADURA+ESCUDO)", selectedChar.armorClass?.armor, "ca_armor")} className="bg-slate-900 border border-cyan-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800 transition-colors">
                             <p className="text-[8px] font-black text-cyan-400 mb-1">C. ARMADURA</p>
                             <span className="text-3xl font-black text-white">{totalCA}</span>
                             <div className="flex items-center justify-center gap-1 mt-1 opacity-40"><span className="text-[7px] font-bold text-slate-300">10+{selectedChar.armorClass?.armor || 0}+{dexMod}</span></div>
                           </div>
-                          <div onClick={() => openEdit("Ataque Base", "VALOR BAB", selectedChar.baseAttack, "bab")} className="bg-slate-900 border border-orange-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer flex flex-col justify-center hover:bg-slate-800">
+                          <div onClick={() => openEdit("Ataque Base", "VALOR BAB", selectedChar.baseAttack, "bab")} className="bg-slate-900 border border-orange-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer flex flex-col justify-center hover:bg-slate-800 transition-colors">
                             <p className="text-[8px] font-black text-orange-400 mb-1">BAB</p>
                             <span className="text-2xl font-black text-white">+{selectedChar.baseAttack || 0}</span>
                           </div>
-                          <div onClick={() => openEdit("Iniciativa", "BONOS MISC", selectedChar.initiativeMisc, "init_misc")} className="bg-slate-900 border border-purple-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800">
+                          <div onClick={() => openEdit("Iniciativa", "BONOS MISC", selectedChar.initiativeMisc, "init_misc")} className="bg-slate-900 border border-purple-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800 transition-colors">
                             <p className="text-[8px] font-black text-purple-400 mb-1 tracking-tighter">INICIATIVA</p>
                             <span className="text-2xl font-black text-white">{dexMod + (selectedChar.initiativeMisc || 0) >= 0 ? "+" : ""}{dexMod + (selectedChar.initiativeMisc || 0)}</span>
                             <p className="text-[7px] font-bold text-slate-500 mt-1 uppercase tracking-tighter">DEX {dexMod} + {selectedChar.initiativeMisc || 0}</p>
@@ -519,7 +517,7 @@ function App() {
                         {/* SALVACIONES */}
                         <div className="flex gap-2">
                           {["fort", "ref", "will"].map((s) => (
-                            <div key={s} onClick={() => openEdit(`Salvación ${s}`, s.toUpperCase(), selectedChar.saves?.[s], `save_${s}`)} className={`flex-1 bg-slate-900/80 p-3 rounded-3xl border border-slate-800 text-center cursor-pointer hover:bg-slate-800`}>
+                            <div key={s} onClick={() => openEdit(`Salvación ${s}`, s.toUpperCase(), selectedChar.saves?.[s], `save_${s}`)} className={`flex-1 bg-slate-900/80 p-3 rounded-3xl border border-slate-800 text-center cursor-pointer hover:bg-slate-800 transition-colors`}>
                               <span className="text-[7px] block font-black text-slate-600">{s.toUpperCase()}</span>
                               <span className={`font-black text-sm ${s === "fort" ? "text-red-400" : s === "ref" ? "text-blue-400" : "text-purple-400"}`}>+{selectedChar.saves?.[s] || 0}</span>
                             </div>
@@ -556,8 +554,7 @@ function App() {
                     <div className="space-y-6">
                       {/* 4. HABILIDADES (SKILLS) */}
                       <CollapsibleSection title="Habilidades (Skills)">
-                        {/* 🛠️ ARREGLO #2: Límite de altura y scrollbar para PC */}
-                        <div className="mt-2 md:max-h-[500px] md:overflow-y-auto pr-1">
+                        <div className="mt-2 md:max-h-[500px] md:overflow-y-auto pr-1 custom-scrollbar">
                           <SkillTable character={selectedChar} onUpdateSkill={(newSkillsArray) => handleUpdateCharacter({ skills: newSkillsArray })} onOpenAddModal={() => setIsSkillModalOpen(true)} />
                         </div>
                       </CollapsibleSection>
@@ -580,7 +577,7 @@ function App() {
 
                   </div>
 
-                  {/* CARGA MOCHILA (Ancho completo abajo) */}
+                  {/* CARGA MOCHILA */}
                   <div className="mt-8 px-2 pb-8">
                     <div className="flex justify-between items-end mb-2">
                       <span className="text-[8px] font-black text-slate-600 tracking-widest uppercase italic">Carga Mochila</span>
@@ -595,7 +592,7 @@ function App() {
                 </div>
               )}
 
-              {/* OTRAS PESTAÑAS (Inv, Spells, Notes) */}
+              {/* PESTAÑA INVENTARIO */}
               {activeTab === "inv" && (
                 <div className="space-y-6">
                   {/* LA BILLETERA FACHERA */}
@@ -625,7 +622,6 @@ function App() {
                   {/* INVENTARIO NORMAL */}
                   <div>
                     <h2 className="text-2xl font-black text-white mb-4 italic tracking-tighter">Mochila</h2>
-                    {/* Grid para PC, Lista para Celular */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {selectedChar.inventory?.map((i) => (
                         <InventoryItem key={i._id} item={i} onDelete={handleDeleteItem} onEdit={() => { setEditingItem(i); setIsModalOpen(true); }} />
@@ -638,6 +634,7 @@ function App() {
                 </div>
               )}
 
+              {/* PESTAÑA SPELLS */}
               {activeTab === "spells" && (() => {
                 const sortedSpells = [...(selectedChar.spells || [])].sort((a, b) => {
                   if (spellSortBy === 'alpha') return a.name.localeCompare(b.name);
@@ -649,22 +646,21 @@ function App() {
                   <div>
                     <div className="flex justify-between items-center mb-4">
                       <h2 className="text-2xl font-black text-white italic tracking-tighter">Grimorio</h2>
-                      <button onClick={() => { setEditingSpell(null); setIsSpellModalOpen(true); }} className="bg-cyan-600 px-4 py-1 rounded-full text-[10px] font-black hover:bg-cyan-500 transition-colors">
+                      <button onClick={() => { setEditingSpell(null); setIsSpellModalOpen(true); }} className="bg-cyan-600 px-4 py-1 rounded-full text-[10px] font-black hover:bg-cyan-500 transition-colors shadow-lg shadow-cyan-900/30 active:scale-95">
                         + APRENDER
                       </button>
                     </div>
 
-                    <div className="flex gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800 w-max mb-4">
-                      <button onClick={() => setSpellSortBy('level')} className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-colors ${spellSortBy === 'level' ? 'bg-cyan-600/20 text-cyan-500' : 'text-slate-500'}`}>
+                    <div className="flex gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800 w-max mb-6">
+                      <button onClick={() => setSpellSortBy('level')} className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-md transition-colors ${spellSortBy === 'level' ? 'bg-cyan-600/20 text-cyan-500' : 'text-slate-500 hover:text-white'}`}>
                         Nivel
                       </button>
-                      <button onClick={() => setSpellSortBy('alpha')} className={`px-3 py-1 text-[9px] font-black uppercase rounded transition-colors ${spellSortBy === 'alpha' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>
+                      <button onClick={() => setSpellSortBy('alpha')} className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-md transition-colors ${spellSortBy === 'alpha' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-white'}`}>
                         A-Z
                       </button>
                     </div>
 
-                    {/* Grid para PC, Lista para Celular */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pb-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
                       {sortedSpells.map((s) => (
                         <SpellCard key={s._id} spell={s} onToggle={handleToggleSpell} onDelete={handleDeleteSpell} onEdit={() => { setEditingSpell(s); setIsSpellModalOpen(true); }} />
                       ))}
@@ -673,15 +669,15 @@ function App() {
                 );
               })()}
 
+              {/* PESTAÑA NOTAS */}
               {activeTab === "notes" && (
                 <div>
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-black text-white italic tracking-tighter">Diario</h2>
-                    <button onClick={() => openEdit("Nota", "ESCRIBIR EN EL DIARIO", "", "note")} className="bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-slate-700 transition-colors">
+                    <button onClick={() => openEdit("Nota", "ESCRIBIR EN EL DIARIO", "", "note")} className="bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase hover:bg-slate-700 transition-colors shadow-lg active:scale-95">
                       + ESCRIBIR
                     </button>
                   </div>
-                  {/* Grid para notas, en PC se acomodan chingón como tarjetas de corcho */}
                   <div className="columns-1 md:columns-2 gap-4 pb-10">
                     {selectedChar.notes?.map((n) => (
                       <NoteCard
@@ -698,6 +694,30 @@ function App() {
           </AnimatePresence>
         </main>
       </div>
+
+      {/* NAV CELULAR (Flotante abajo, Oculto en PC) */}
+      <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-slate-900/90 backdrop-blur-md border border-white/10 px-6 py-3 flex justify-between items-center z-40 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+        {[
+          { id: "stats", icon: "⚔️", label: "Stats" },
+          { id: "inv", icon: "🎒", label: "Mochila" },
+          { id: "spells", icon: "🪄", label: "Spells" },
+          { id: "notes", icon: "📜", label: "Notas" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`relative flex flex-col items-center transition-all duration-300 ${activeTab === tab.id ? "text-cyan-400 scale-110" : "text-slate-500"}`}
+          >
+            {activeTab === tab.id && (
+              <motion.div layoutId="mobile-glow" className="absolute -top-1 w-10 h-10 bg-cyan-500/20 blur-xl rounded-full" />
+            )}
+            <span className="text-xl z-10">{tab.icon}</span>
+            <span className="text-[8px] font-black uppercase mt-1 tracking-widest">
+              {tab.label}
+            </span>
+          </button>
+        ))}
+      </nav>
       
       {/* MODALES REUNIDOS */}
       <UpdateValueModal isOpen={editModal.isOpen} title={editModal.title} label={editModal.label} initialValue={editModal.value} type={editModal.type} onClose={() => setEditModal({ ...editModal, isOpen: false })} onUpdate={handleFinalUpdate} />
