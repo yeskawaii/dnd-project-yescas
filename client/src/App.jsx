@@ -22,6 +22,7 @@ import AddAttackModal from "./components/AddAttackModal";
 import FeatCard from "./components/FeatCard";
 import AddFeatModal from "./components/AddFeatModal";
 import AddSkillModal from "./components/AddSkillModal";
+import ConfirmDeleteModal from "./components/ConfirmDeleteModal"; // <-- NUEVO MODAL
 
 // --- UTILIDADES DE CONVERSIÓN ---
 import { lbToKg, kgToLb, inToCm, cmToIn } from "./utils/conversions";
@@ -41,6 +42,18 @@ function App() {
   const [isAttackModalOpen, setIsAttackModalOpen] = useState(false);
   const [isFeatModalOpen, setIsFeatModalOpen] = useState(false);
   const [isSkillModalOpen, setIsSkillModalOpen] = useState(false);
+
+  // ESTADO PARA EL MODAL DE BORRAR
+  const [deleteAlert, setDeleteAlert] = useState({
+    isOpen: false,
+    title: "",
+    msg: "",
+    action: null
+  });
+
+  const askDelete = (title, msg, action) => {
+    setDeleteAlert({ isOpen: true, title, msg, action });
+  };
 
   // ESTADOS PARA EDICIÓN
   const [editingItem, setEditingItem] = useState(null);
@@ -108,10 +121,10 @@ function App() {
     switch (t) {
       case "name":
         updateData = { name: valToSave };
-        break; 
+        break;
       case "class":
         updateData = { class: valToSave };
-        break; 
+        break;
       case "race":
       case "alignment":
       case "deity":
@@ -192,9 +205,9 @@ function App() {
             setSelectedChar({
               ...selectedChar,
               notes: selectedChar.notes.map((n) =>
-                n._id === editModal.statName ? res.data : n
+                n._id === editModal.statName ? res.data : n,
               ),
-            })
+            }),
           );
         setEditModal({ ...editModal, isOpen: false });
         return;
@@ -224,104 +237,104 @@ function App() {
     setEditModal({ ...editModal, isOpen: false });
   };
 
-  // HANDLERS PARA INVENTARIO
+  // -----------------------------------------------------
+  // HANDLERS PARA AGREGAR Y EDITAR
+  // -----------------------------------------------------
   const handleAddItem = (i) =>
     api.post(`/character/${selectedChar._id}/inventory`, i).then((r) =>
-      setSelectedChar({
-        ...selectedChar,
-        inventory: [...selectedChar.inventory, r.data],
-      }),
-    );
-  const handleUpdateItem = (id, updatedData) => {
-    api.patch(`/character/${selectedChar._id}/inventory/${id}`, updatedData).then(r => {
-      setSelectedChar({
-        ...selectedChar, 
-        inventory: selectedChar.inventory.map(i => i._id === id ? r.data : i)
-      });
-    });
-  };
-  const handleDeleteItem = (id) =>
-    api.delete(`/character/${selectedChar._id}/inventory/${id}`).then(() =>
-      setSelectedChar({
-        ...selectedChar,
-        inventory: selectedChar.inventory.filter((i) => i._id !== id),
-      }),
+      setSelectedChar({ ...selectedChar, inventory: [...selectedChar.inventory, r.data] })
     );
 
-  // HANDLERS PARA HECHIZOS
+  const handleUpdateItem = (id, updatedData) => {
+    api.patch(`/character/${selectedChar._id}/inventory/${id}`, updatedData).then((r) => {
+      setSelectedChar({ ...selectedChar, inventory: selectedChar.inventory.map((i) => (i._id === id ? r.data : i)) });
+    });
+  };
+
   const handleAddSpell = (s) =>
     api.post(`/character/${selectedChar._id}/spells`, s).then((r) =>
-      setSelectedChar({
-        ...selectedChar,
-        spells: [...selectedChar.spells, r.data],
-      }),
-    );
-  const handleUpdateSpell = (id, updatedData) => {
-    api.patch(`/character/${selectedChar._id}/spells/${id}`, updatedData).then(r => {
-      setSelectedChar({
-        ...selectedChar, 
-        spells: selectedChar.spells.map(s => s._id === id ? r.data : s)
-      });
-    });
-  };
-  const handleToggleSpell = (id) =>
-    api.patch(`/character/${selectedChar._id}/spells/${id}`).then((r) =>
-      setSelectedChar({
-        ...selectedChar,
-        spells: selectedChar.spells.map((s) => (s._id === id ? r.data : s)),
-      }),
-    );
-  const handleDeleteSpell = (id) =>
-    api.delete(`/character/${selectedChar._id}/spells/${id}`).then(() =>
-      setSelectedChar({
-        ...selectedChar,
-        spells: selectedChar.spells.filter((s) => s._id !== id),
-      }),
+      setSelectedChar({ ...selectedChar, spells: [...selectedChar.spells, r.data] })
     );
 
-  // OTROS HANDLERS
-  const handleDeleteNote = (id) =>
-    api.delete(`/character/${selectedChar._id}/notes/${id}`).then(() =>
-      setSelectedChar({
-        ...selectedChar,
-        notes: selectedChar.notes.filter((n) => n._id !== id),
-      }),
+  const handleUpdateSpell = (id, updatedData) => {
+    api.patch(`/character/${selectedChar._id}/spells/${id}`, updatedData).then((r) => {
+      setSelectedChar({ ...selectedChar, spells: selectedChar.spells.map((s) => (s._id === id ? r.data : s)) });
+    });
+  };
+
+  const handleToggleSpell = (id) =>
+    api.patch(`/character/${selectedChar._id}/spells/${id}`).then((r) =>
+      setSelectedChar({ ...selectedChar, spells: selectedChar.spells.map((s) => (s._id === id ? r.data : s)) })
     );
+
+  const handleAddAttack = (a) =>
+    api.post(`/character/${selectedChar._id}/attacks`, a).then((r) =>
+      setSelectedChar({ ...selectedChar, attacks: [...(selectedChar.attacks || []), r.data] })
+    );
+
+  const handleAddFeat = (f) =>
+    api.post(`/character/${selectedChar._id}/feats`, f).then((r) =>
+      setSelectedChar({ ...selectedChar, feats: [...(selectedChar.feats || []), r.data] })
+    );
+
   const handleCreateCharacter = (d) =>
     api.post("/character", d).then((r) => {
       setCharacters([...characters, r.data]);
       setSelectedChar(r.data);
     });
 
-  const handleAddAttack = (a) =>
-    api.post(`/character/${selectedChar._id}/attacks`, a).then((r) =>
-      setSelectedChar({
-        ...selectedChar,
-        attacks: [...(selectedChar.attacks || []), r.data],
-      }),
-    );
-  const handleDeleteAttack = (id) =>
-    api.delete(`/character/${selectedChar._id}/attacks/${id}`).then(() =>
-      setSelectedChar({
-        ...selectedChar,
-        attacks: (selectedChar.attacks || []).filter((a) => a._id !== id),
-      }),
-    );
 
-  const handleAddFeat = (f) =>
-    api.post(`/character/${selectedChar._id}/feats`, f).then((r) =>
-      setSelectedChar({
-        ...selectedChar,
-        feats: [...(selectedChar.feats || []), r.data],
-      }),
-    );
-  const handleDeleteFeat = (id) =>
-    api.delete(`/character/${selectedChar._id}/feats/${id}`).then(() =>
-      setSelectedChar({
-        ...selectedChar,
-        feats: (selectedChar.feats || []).filter((f) => f._id !== id),
-      }),
-    );
+  // -----------------------------------------------------
+  // HANDLERS DE BORRADO (CON MODAL DE CONFIRMACIÓN)
+  // -----------------------------------------------------
+  const handleDeleteCharacter = (id) => {
+    askDelete("Borrar Aventurero", "¿Mandarlo al vacío absoluto? Esta acción no se puede deshacer.", () => {
+      api.delete(`/character/${id}`).then(() => {
+        setCharacters(characters.filter((c) => c._id !== id));
+        toast.success("Héroe eliminado");
+      }).catch(() => toast.error("Error al borrar héroe"));
+    });
+  };
+
+  const handleDeleteItem = (id) => {
+    askDelete("Tirar Objeto", "¿Seguro que quieres tirar esto de tu mochila?", () => {
+      api.delete(`/character/${selectedChar._id}/inventory/${id}`).then(() =>
+        setSelectedChar({ ...selectedChar, inventory: selectedChar.inventory.filter((i) => i._id !== id) })
+      );
+    });
+  };
+
+  const handleDeleteSpell = (id) => {
+    askDelete("Olvidar Hechizo", "¿Seguro que quieres borrar este hechizo de tu grimorio?", () => {
+      api.delete(`/character/${selectedChar._id}/spells/${id}`).then(() =>
+        setSelectedChar({ ...selectedChar, spells: selectedChar.spells.filter((s) => s._id !== id) })
+      );
+    });
+  };
+
+  const handleDeleteNote = (id) => {
+    askDelete("Quemar Nota", "¿Arrancar esta página del diario para siempre?", () => {
+      api.delete(`/character/${selectedChar._id}/notes/${id}`).then(() =>
+        setSelectedChar({ ...selectedChar, notes: selectedChar.notes.filter((n) => n._id !== id) })
+      );
+    });
+  };
+
+  const handleDeleteAttack = (id) => {
+    askDelete("Destruir Arma", "¿Seguro que quieres eliminar este ataque equipado?", () => {
+      api.delete(`/character/${selectedChar._id}/attacks/${id}`).then(() =>
+        setSelectedChar({ ...selectedChar, attacks: (selectedChar.attacks || []).filter((a) => a._id !== id) })
+      );
+    });
+  };
+
+  const handleDeleteFeat = (id) => {
+    askDelete("Olvidar Dote", "¿Seguro que quieres olvidar esta habilidad pasiva?", () => {
+      api.delete(`/character/${selectedChar._id}/feats/${id}`).then(() =>
+        setSelectedChar({ ...selectedChar, feats: (selectedChar.feats || []).filter((f) => f._id !== id) })
+      );
+    });
+  };
 
   if (loading)
     return (
@@ -333,34 +346,65 @@ function App() {
 
   if (!selectedChar) {
     return (
-      <div className="min-h-screen bg-slate-950 p-8 flex flex-col items-center">
+      <div className="min-h-screen bg-slate-950 p-8 flex flex-col items-center relative">
         <Toaster position="top-center" richColors theme="dark" />
-        <h1 className="text-orange-500 font-black text-3xl mb-12 italic uppercase tracking-tighter">
+
+        {/* MODAL DE BORRADO DE PERSONAJE */}
+        <ConfirmDeleteModal 
+          isOpen={deleteAlert.isOpen} 
+          title={deleteAlert.title} 
+          message={deleteAlert.msg} 
+          onClose={() => setDeleteAlert({ ...deleteAlert, isOpen: false })} 
+          onConfirm={deleteAlert.action} 
+        />
+
+        {/* LOGOUT FLOTANTE */}
+        <div className="absolute top-6 right-6">
+          <button
+            onClick={logout}
+            className="w-10 h-10 bg-red-950/30 rounded-xl border border-red-900/50 text-red-500 flex items-center justify-center text-lg active:scale-95 transition-colors hover:bg-red-900/50 shadow-lg"
+          >
+            🚪
+          </button>
+        </div>
+
+        <h1 className="text-orange-500 font-black text-3xl mb-12 italic uppercase tracking-tighter mt-10">
           Aventureros
         </h1>
+
         <div className="grid gap-4 w-full max-w-sm">
           {characters.map((c) => (
             <motion.div
               whileTap={{ scale: 0.95 }}
               key={c._id}
-              className="rounded-2xl bg-slate-900 border border-slate-800 p-6 active:scale-95 transition-all"
+              className="rounded-2xl bg-slate-900 border border-slate-800 p-4 active:scale-95 transition-all flex items-center justify-between gap-3 shadow-lg"
             >
               <button
                 onClick={() => setSelectedChar(c)}
-                className="w-full text-left"
+                className="flex-1 text-left overflow-hidden"
               >
-                <h2 className="text-white font-black uppercase text-lg">
+                <h2 className="text-white font-black uppercase text-lg truncate">
                   {c.name}
                 </h2>
                 <p className="text-slate-500 text-[10px] font-bold mt-1 uppercase tracking-widest">
                   {c.class} • LVL {c.level}
                 </p>
               </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteCharacter(c._id);
+                }}
+                className="w-10 h-10 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl flex items-center justify-center text-red-500 flex-shrink-0 transition-colors"
+              >
+                🗑️
+              </button>
             </motion.div>
           ))}
           <button
             onClick={() => setIsCharModalOpen(true)}
-            className="border-2 border-dashed border-slate-800 p-6 rounded-2xl text-slate-600 font-black text-xs mt-4 uppercase"
+            className="border-2 border-dashed border-slate-800 p-6 rounded-2xl text-slate-600 font-black text-xs mt-4 uppercase hover:bg-slate-900 hover:text-white transition-colors"
           >
             + Crear Nuevo
           </button>
@@ -384,7 +428,7 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans uppercase relative">
       <Toaster position="top-center" richColors theme="dark" />
-      
+
       {/* HEADER TOTALMENTE EDITABLE */}
       <header className="px-6 py-4 pt-10 sticky top-0 z-50 bg-slate-950 border-b border-slate-800 flex justify-between items-center shadow-md">
         <div className="flex items-center gap-3 w-full">
@@ -393,34 +437,61 @@ function App() {
           </div>
           <div className="flex flex-col w-full overflow-hidden">
             <h1
-              onClick={() => openEdit("Renombrar", "NOMBRE DEL HÉROE", selectedChar.name, "name")}
+              onClick={() =>
+                openEdit("Renombrar", "NOMBRE DEL HÉROE", selectedChar.name, "name")
+              }
               className="text-xl font-black text-white leading-none tracking-tighter truncate cursor-pointer hover:text-orange-500 transition-colors"
             >
-              {selectedChar.name} <span className="text-[10px] text-slate-700">✎</span>
+              {selectedChar.name}{" "}
+              <span className="text-[10px] text-slate-700">✎</span>
             </h1>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span onClick={() => openEdit("Clase", "PROFESIÓN", selectedChar.class, "class")} className="bg-slate-800 px-2 py-0.5 rounded text-[9px] font-black text-slate-400 uppercase cursor-pointer hover:bg-slate-700">
+              <span
+                onClick={() =>
+                  openEdit("Clase", "PROFESIÓN", selectedChar.class, "class")
+                }
+                className="bg-slate-800 px-2 py-0.5 rounded text-[9px] font-black text-slate-400 uppercase cursor-pointer hover:bg-slate-700"
+              >
                 {selectedChar.class} ✎
               </span>
-              <span onClick={() => openEdit("Nivel", "NIVEL ACTUAL", selectedChar.level, "level")} className="text-[9px] font-black text-slate-500 cursor-pointer hover:text-white">
+              <span
+                onClick={() =>
+                  openEdit("Nivel", "NIVEL ACTUAL", selectedChar.level, "level")
+                }
+                className="text-[9px] font-black text-slate-500 cursor-pointer hover:text-white"
+              >
                 LVL {selectedChar.level} ✎
               </span>
               <span className="text-slate-700 text-[8px]">•</span>
-              <span onClick={() => openEdit("Experiencia", "XP TOTAL", selectedChar.experience || 0, "experience")} className="text-[9px] font-black text-cyan-600 cursor-pointer hover:text-cyan-400">
+              <span
+                onClick={() =>
+                  openEdit("Experiencia", "XP TOTAL", selectedChar.experience || 0, "experience")
+                }
+                className="text-[9px] font-black text-cyan-600 cursor-pointer hover:text-cyan-400"
+              >
                 XP: {selectedChar.experience || 0} ✎
               </span>
             </div>
           </div>
         </div>
         <div className="flex gap-2 ml-2 flex-shrink-0">
-          <button onClick={() => setSelectedChar(null)} className="w-8 h-8 bg-slate-900 rounded-xl border border-slate-800 text-slate-400 flex items-center justify-center text-xs active:scale-95 transition-colors hover:bg-slate-800">🔄</button>
-          <button onClick={logout} className="w-8 h-8 bg-red-950/30 rounded-xl border border-red-900/50 text-red-500 flex items-center justify-center text-xs active:scale-95 transition-colors hover:bg-red-900/50">🚪</button>
+          <button
+            onClick={() => setSelectedChar(null)}
+            className="w-8 h-8 bg-slate-900 rounded-xl border border-slate-800 text-slate-400 flex items-center justify-center text-xs active:scale-95 transition-colors hover:bg-slate-800"
+          >
+            🔄
+          </button>
+          <button
+            onClick={logout}
+            className="w-8 h-8 bg-red-950/30 rounded-xl border border-red-900/50 text-red-500 flex items-center justify-center text-xs active:scale-95 transition-colors hover:bg-red-900/50"
+          >
+            🚪
+          </button>
         </div>
       </header>
 
       {/* CONTENEDOR PRINCIPAL CENTRADO */}
       <div className="max-w-5xl mx-auto w-full px-4 mt-6">
-        
         {/* NAV ESCRITORIO (Horizontal, centrado, solo visible en PC/Tablet) */}
         <nav className="hidden md:flex justify-center gap-2 mb-8 bg-slate-900/50 p-2 rounded-2xl border border-slate-800 w-max mx-auto shadow-lg backdrop-blur-sm">
           {[
@@ -433,13 +504,18 @@ function App() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`relative flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-black tracking-widest text-xs uppercase ${
-                activeTab === tab.id ? "text-cyan-400 bg-cyan-500/10" : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+                activeTab === tab.id
+                  ? "text-cyan-400 bg-cyan-500/10"
+                  : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
               }`}
             >
               <span className="text-lg z-10">{tab.icon}</span>
               <span className="z-10">{tab.label}</span>
               {activeTab === tab.id && (
-                <motion.div layoutId="desktop-glow" className="absolute inset-0 border border-cyan-500/30 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.15)]" />
+                <motion.div
+                  layoutId="desktop-glow"
+                  className="absolute inset-0 border border-cyan-500/30 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.15)]"
+                />
               )}
             </button>
           ))}
@@ -470,54 +546,91 @@ function App() {
                   {/* 1. BIOGRAFÍA Y FÍSICO */}
                   <CollapsibleSection title="Biografía y Físico">
                     <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                      <button onClick={() => setUnitSystem(unitSystem === "imp" ? "metric" : "imp")} className="bg-orange-600/20 border border-orange-500/40 px-3 py-2 rounded-2xl text-[8px] font-black text-orange-500 flex-shrink-0 hover:bg-orange-600/30 transition-colors">
+                      <button
+                        onClick={() => setUnitSystem(unitSystem === "imp" ? "metric" : "imp")}
+                        className="bg-orange-600/20 border border-orange-500/40 px-3 py-2 rounded-2xl text-[8px] font-black text-orange-500 flex-shrink-0 hover:bg-orange-600/30 transition-colors"
+                      >
                         MODO: {unitSystem === "imp" ? "LB/FT" : "KG/CM"}
                       </button>
                       {["race", "alignment", "deity"].map((f) => (
-                        <div key={f} onClick={() => openEdit(`Cambiar ${f}`, f.toUpperCase(), selectedChar[f], f)} className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800 transition-colors">
+                        <div
+                          key={f}
+                          onClick={() => openEdit(`Cambiar ${f}`, f.toUpperCase(), selectedChar[f], f)}
+                          className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800 transition-colors"
+                        >
                           <p className="text-[7px] font-black text-slate-600 uppercase">{f}</p>
                           <p className="text-xs font-bold text-white">{selectedChar[f] || "---"}</p>
                         </div>
                       ))}
-                      <div onClick={() => openEdit("Altura", "CM O PULGADAS", selectedChar.height, "height")} className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800 transition-colors">
+                      <div
+                        onClick={() => openEdit("Altura", "CM O PULGADAS", selectedChar.height, "height")}
+                        className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800 transition-colors"
+                      >
                         <p className="text-[7px] font-black text-slate-600 uppercase">Estatura</p>
-                        <p className="text-xs font-bold text-white">{unitSystem === "imp" ? `${selectedChar.height || 0}"` : `${inToCm(selectedChar.height || 0)} cm`}</p>
+                        <p className="text-xs font-bold text-white">
+                          {unitSystem === "imp" ? `${selectedChar.height || 0}"` : `${inToCm(selectedChar.height || 0)} cm`}
+                        </p>
                       </div>
-                      <div onClick={() => openEdit("Peso Corporal", "PESO SIN EQUIPO", selectedChar.physicalWeight, "physicalWeight")} className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800 transition-colors">
+                      <div
+                        onClick={() => openEdit("Peso Corporal", "PESO SIN EQUIPO", selectedChar.physicalWeight, "physicalWeight")}
+                        className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer hover:bg-slate-800 transition-colors"
+                      >
                         <p className="text-[7px] font-black text-slate-600 uppercase">Peso Pers.</p>
-                        <p className="text-xs font-bold text-orange-400">{unitSystem === "imp" ? `${selectedChar.physicalWeight || 0} lb` : `${lbToKg(selectedChar.physicalWeight || 0)} kg`}</p>
+                        <p className="text-xs font-bold text-orange-400">
+                          {unitSystem === "imp" ? `${selectedChar.physicalWeight || 0} lb` : `${lbToKg(selectedChar.physicalWeight || 0)} kg`}
+                        </p>
                       </div>
                     </div>
                   </CollapsibleSection>
 
-                  {/* GRID PARA PANTALLAS GRANDES (PC/TABLET) - AHORA ES UN GRID PLANO */}
+                  {/* GRID PLANO */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mt-6">
-                    
-                    {/* 1. COMBATE (PC: Izquierda Arriba | Celular: 1) */}
+                    {/* 1. COMBATE */}
                     <CollapsibleSection title="Estadísticas de Combate" defaultOpen={true}>
                       <div className="grid grid-cols-3 gap-3 mb-4">
-                        <div onClick={() => openEdit("Armadura", "EQUIPO (ARMADURA+ESCUDO)", selectedChar.armorClass?.armor, "ca_armor")} className="bg-slate-900 border border-cyan-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800 transition-colors">
+                        <div
+                          onClick={() => openEdit("Armadura", "EQUIPO (ARMADURA+ESCUDO)", selectedChar.armorClass?.armor, "ca_armor")}
+                          className="bg-slate-900 border border-cyan-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800 transition-colors"
+                        >
                           <p className="text-[8px] font-black text-cyan-400 mb-1">C. ARMADURA</p>
                           <span className="text-3xl font-black text-white">{totalCA}</span>
-                          <div className="flex items-center justify-center gap-1 mt-1 opacity-40"><span className="text-[7px] font-bold text-slate-300">10+{selectedChar.armorClass?.armor || 0}+{dexMod}</span></div>
+                          <div className="flex items-center justify-center gap-1 mt-1 opacity-40">
+                            <span className="text-[7px] font-bold text-slate-300">10+{selectedChar.armorClass?.armor || 0}+{dexMod}</span>
+                          </div>
                         </div>
-                        <div onClick={() => openEdit("Ataque Base", "VALOR BAB", selectedChar.baseAttack, "bab")} className="bg-slate-900 border border-orange-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer flex flex-col justify-center hover:bg-slate-800 transition-colors">
+                        <div
+                          onClick={() => openEdit("Ataque Base", "VALOR BAB", selectedChar.baseAttack, "bab")}
+                          className="bg-slate-900 border border-orange-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer flex flex-col justify-center hover:bg-slate-800 transition-colors"
+                        >
                           <p className="text-[8px] font-black text-orange-400 mb-1">BAB</p>
                           <span className="text-2xl font-black text-white">+{selectedChar.baseAttack || 0}</span>
                         </div>
-                        <div onClick={() => openEdit("Iniciativa", "BONOS MISC", selectedChar.initiativeMisc, "init_misc")} className="bg-slate-900 border border-purple-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800 transition-colors">
+                        <div
+                          onClick={() => openEdit("Iniciativa", "BONOS MISC", selectedChar.initiativeMisc, "init_misc")}
+                          className="bg-slate-900 border border-purple-500/20 p-3 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-slate-800 transition-colors"
+                        >
                           <p className="text-[8px] font-black text-purple-400 mb-1 tracking-tighter">INICIATIVA</p>
-                          <span className="text-2xl font-black text-white">{dexMod + (selectedChar.initiativeMisc || 0) >= 0 ? "+" : ""}{dexMod + (selectedChar.initiativeMisc || 0)}</span>
-                          <p className="text-[7px] font-bold text-slate-500 mt-1 uppercase tracking-tighter">DEX {dexMod} + {selectedChar.initiativeMisc || 0}</p>
+                          <span className="text-2xl font-black text-white">
+                            {dexMod + (selectedChar.initiativeMisc || 0) >= 0 ? "+" : ""}{dexMod + (selectedChar.initiativeMisc || 0)}
+                          </span>
+                          <p className="text-[7px] font-bold text-slate-500 mt-1 uppercase tracking-tighter">
+                            DEX {dexMod} + {selectedChar.initiativeMisc || 0}
+                          </p>
                         </div>
                       </div>
 
                       {/* SALVACIONES */}
                       <div className="flex gap-2">
                         {["fort", "ref", "will"].map((s) => (
-                          <div key={s} onClick={() => openEdit(`Salvación ${s}`, s.toUpperCase(), selectedChar.saves?.[s], `save_${s}`)} className={`flex-1 bg-slate-900/80 p-3 rounded-3xl border border-slate-800 text-center cursor-pointer hover:bg-slate-800 transition-colors`}>
+                          <div
+                            key={s}
+                            onClick={() => openEdit(`Salvación ${s}`, s.toUpperCase(), selectedChar.saves?.[s], `save_${s}`)}
+                            className={`flex-1 bg-slate-900/80 p-3 rounded-3xl border border-slate-800 text-center cursor-pointer hover:bg-slate-800 transition-colors`}
+                          >
                             <span className="text-[7px] block font-black text-slate-600">{s.toUpperCase()}</span>
-                            <span className={`font-black text-sm ${s === "fort" ? "text-red-400" : s === "ref" ? "text-blue-400" : "text-purple-400"}`}>+{selectedChar.saves?.[s] || 0}</span>
+                            <span className={`font-black text-sm ${s === "fort" ? "text-red-400" : s === "ref" ? "text-blue-400" : "text-purple-400"}`}>
+                              +{selectedChar.saves?.[s] || 0}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -526,11 +639,15 @@ function App() {
                       <div className="mt-6 pt-4 border-t border-slate-800">
                         <div className="flex justify-between items-center mb-3">
                           <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Armas Equipadas</h3>
-                          <button onClick={() => setIsAttackModalOpen(true)} className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-2 py-1 rounded hover:bg-orange-500/20 transition-colors">+ AGREGAR</button>
+                          <button onClick={() => setIsAttackModalOpen(true)} className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-2 py-1 rounded hover:bg-orange-500/20 transition-colors">
+                            + AGREGAR
+                          </button>
                         </div>
                         <div className="space-y-2">
                           {selectedChar.attacks?.length > 0 ? (
-                            selectedChar.attacks.map((atk) => <AttackCard key={atk._id} attack={atk} character={selectedChar} onDelete={handleDeleteAttack} />)
+                            selectedChar.attacks.map((atk) => (
+                              <AttackCard key={atk._id} attack={atk} character={selectedChar} onDelete={handleDeleteAttack} />
+                            ))
                           ) : (
                             <p className="text-center text-[10px] text-slate-600 italic py-4">Desarmado. Usa los puños.</p>
                           )}
@@ -538,7 +655,7 @@ function App() {
                       </div>
                     </CollapsibleSection>
 
-                    {/* 2. ATRIBUTOS (PC: Derecha Arriba | Celular: 2) */}
+                    {/* 2. ATRIBUTOS */}
                     <CollapsibleSection title="Atributos Base">
                       <div className="grid grid-cols-2 gap-x-4 gap-y-10 justify-items-center mt-6">
                         {Object.entries(selectedChar.stats || {}).map(([stat, val]) => (
@@ -547,28 +664,31 @@ function App() {
                       </div>
                     </CollapsibleSection>
 
-                    {/* 3. HABILIDADES (PC: Izquierda Abajo | Celular: 3) */}
+                    {/* 3. HABILIDADES */}
                     <CollapsibleSection title="Habilidades (Skills)">
                       <div className="mt-2 md:max-h-[500px] md:overflow-y-auto pr-1 custom-scrollbar">
                         <SkillTable character={selectedChar} onUpdateSkill={(newSkillsArray) => handleUpdateCharacter({ skills: newSkillsArray })} onOpenAddModal={() => setIsSkillModalOpen(true)} />
                       </div>
                     </CollapsibleSection>
 
-                    {/* 4. DOTES Y RASGOS (PC: Derecha Abajo | Celular: 4) */}
+                    {/* 4. DOTES Y RASGOS */}
                     <CollapsibleSection title="Dotes y Rasgos">
                       <div className="flex justify-between items-center mb-3 mt-2">
                         <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Habilidades Pasivas</span>
-                        <button onClick={() => setIsFeatModalOpen(true)} className="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded hover:bg-emerald-500/20 transition-colors">+ AGREGAR DOTE</button>
+                        <button onClick={() => setIsFeatModalOpen(true)} className="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded hover:bg-emerald-500/20 transition-colors">
+                          + AGREGAR DOTE
+                        </button>
                       </div>
                       <div className="space-y-1">
                         {selectedChar.feats?.length > 0 ? (
-                          selectedChar.feats.map((f) => <FeatCard key={f._id} feat={f} onDelete={handleDeleteFeat} />)
+                          selectedChar.feats.map((f) => (
+                            <FeatCard key={f._id} feat={f} onDelete={handleDeleteFeat} />
+                          ))
                         ) : (
                           <p className="text-center text-[10px] text-slate-600 italic py-4">Sin dotes registradas.</p>
                         )}
                       </div>
                     </CollapsibleSection>
-
                   </div>
 
                   {/* CARGA MOCHILA */}
@@ -589,7 +709,7 @@ function App() {
               {/* PESTAÑA INVENTARIO */}
               {activeTab === "inv" && (
                 <div className="space-y-6">
-                  {/* LA BILLETERA FACHERA */}
+                  {/* BILLETERA */}
                   <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-4 shadow-lg relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 blur-3xl rounded-full"></div>
                     <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span>🪙</span> Monedero</h3>
@@ -631,7 +751,7 @@ function App() {
               {/* PESTAÑA SPELLS */}
               {activeTab === "spells" && (() => {
                 const sortedSpells = [...(selectedChar.spells || [])].sort((a, b) => {
-                  if (spellSortBy === 'alpha') return a.name.localeCompare(b.name);
+                  if (spellSortBy === "alpha") return a.name.localeCompare(b.name);
                   if (a.level === b.level) return a.name.localeCompare(b.name);
                   return a.level - b.level;
                 });
@@ -646,10 +766,10 @@ function App() {
                     </div>
 
                     <div className="flex gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800 w-max mb-6">
-                      <button onClick={() => setSpellSortBy('level')} className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-md transition-colors ${spellSortBy === 'level' ? 'bg-cyan-600/20 text-cyan-500' : 'text-slate-500 hover:text-white'}`}>
+                      <button onClick={() => setSpellSortBy("level")} className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-md transition-colors ${spellSortBy === "level" ? "bg-cyan-600/20 text-cyan-500" : "text-slate-500 hover:text-white"}`}>
                         Nivel
                       </button>
-                      <button onClick={() => setSpellSortBy('alpha')} className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-md transition-colors ${spellSortBy === 'alpha' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-white'}`}>
+                      <button onClick={() => setSpellSortBy("alpha")} className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-md transition-colors ${spellSortBy === "alpha" ? "bg-slate-800 text-white" : "text-slate-500 hover:text-white"}`}>
                         A-Z
                       </button>
                     </div>
@@ -674,12 +794,7 @@ function App() {
                   </div>
                   <div className="columns-1 md:columns-2 gap-4 pb-10">
                     {selectedChar.notes?.map((n) => (
-                      <NoteCard
-                        key={n._id}
-                        note={n}
-                        onDelete={handleDeleteNote}
-                        onEdit={() => openEdit("Editar Nota", "CONTENIDO DE LA NOTA", n.content, "edit_note", n._id)}
-                      />
+                      <NoteCard key={n._id} note={n} onDelete={handleDeleteNote} onEdit={() => openEdit("Editar Nota", "CONTENIDO DE LA NOTA", n.content, "edit_note", n._id)} />
                     ))}
                   </div>
                 </div>
@@ -697,21 +812,22 @@ function App() {
           { id: "spells", icon: "🪄", label: "Spells" },
           { id: "notes", icon: "📜", label: "Notas" },
         ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`relative flex flex-col items-center transition-all duration-300 ${activeTab === tab.id ? "text-cyan-400 scale-110" : "text-slate-500"}`}
-          >
-            {activeTab === tab.id && (
-              <motion.div layoutId="mobile-glow" className="absolute -top-1 w-10 h-10 bg-cyan-500/20 blur-xl rounded-full" />
-            )}
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`relative flex flex-col items-center transition-all duration-300 ${activeTab === tab.id ? "text-cyan-400 scale-110" : "text-slate-500"}`}>
+            {activeTab === tab.id && <motion.div layoutId="mobile-glow" className="absolute -top-1 w-10 h-10 bg-cyan-500/20 blur-xl rounded-full" />}
             <span className="text-xl z-10">{tab.icon}</span>
-            <span className="text-[8px] font-black uppercase mt-1 tracking-widest">
-              {tab.label}
-            </span>
+            <span className="text-[8px] font-black uppercase mt-1 tracking-widest">{tab.label}</span>
           </button>
         ))}
       </nav>
+
+      {/* MODAL GLOBAL PARA CONFIRMAR BORRADOS */}
+      <ConfirmDeleteModal 
+        isOpen={deleteAlert.isOpen} 
+        title={deleteAlert.title} 
+        message={deleteAlert.msg} 
+        onClose={() => setDeleteAlert({ ...deleteAlert, isOpen: false })} 
+        onConfirm={deleteAlert.action} 
+      />
       
       {/* MODALES REUNIDOS */}
       <UpdateValueModal isOpen={editModal.isOpen} title={editModal.title} label={editModal.label} initialValue={editModal.value} type={editModal.type} onClose={() => setEditModal({ ...editModal, isOpen: false })} onUpdate={handleFinalUpdate} />
