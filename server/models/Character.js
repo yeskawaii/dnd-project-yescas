@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const defaultSkills = [
   { name: "Abrir Cerraduras", stat: "Destreza" },
@@ -36,126 +36,149 @@ const defaultSkills = [
   { name: "Trato con Animales", stat: "Carisma" },
   { name: "Trepar", stat: "Fuerza" },
   { name: "Usar Objeto Mágico", stat: "Carisma" },
-  { name: "Usar Cuerda", stat: "Destreza" }
+  { name: "Usar Cuerda", stat: "Destreza" },
 ];
 
-const characterSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  
-  // BIOGRAFÍA
-  name: { type: String, required: true },
-  class: { type: String, default: "Guerrero" },
-  level: { type: Number, default: 1 },
-  race: { type: String, default: "Humano" },
-  deity: { type: String, default: "Ninguno" },
-  alignment: { type: String, default: "Neutral" },
-  size: { type: String, default: "Mediano" },
-  experience: { type: Number, default: 0 },
-  physicalWeight: { type: Number, default: 150 },
-  height: { type: Number, default: 70 },
-  
-  // COMBATE BÁSICO
-  baseAttack: { type: Number, default: 0 },   // BAB
-  speed: { type: String, default: "30 ft" },  // Velocidad
-  initiativeMisc: { type: Number, default: 0 }, // Para dotes como Iniciativa Mejorada
+const characterSchema = new mongoose.Schema(
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
-  // ATAQUES Y ARMAS
-  attacks: [{
-    name: { type: String, required: true }, // "Espada Larga de Hierro Frío"
-    attackBonus: { type: Number, default: 0 }, // El +1 mágico o bonos extra
-    damageDice: { type: String, default: "1d8" }, // "1d8", "2d6", etc.
-    damageBonus: { type: Number, default: 0 }, // Daño mágico extra
-    critRange: { type: String, default: "20" }, // "19-20" o "20"
-    critMultiplier: { type: String, default: "x2" }, // "x2", "x3"
-    type: { type: String, default: "Melee" }, // "Melee", "Ranged", "Finesse"
-    damageType: { type: String, default: "Cortante" } // "Cortante", "Perforante"
-  }],
-
-  // BILLETERA
-  money: {
-    cp: { type: Number, default: 0 }, // Cobre (Copper)
-    sp: { type: Number, default: 0 }, // Plata (Silver)
-    gp: { type: Number, default: 0 }, // Oro (Gold)
-    pp: { type: Number, default: 0 }  // Platino (Platinum)
-  },
-
-  saves: {
-    fort: { type: Number, default: 0 },
-    ref: { type: Number, default: 0 },
-    will: { type: Number, default: 0 }
-  },
-
-  armorClass: {
-    armor: { type: Number, default: 0 },
-    shield: { type: Number, default: 0 },
-    natural: { type: Number, default: 0 },
-    misc: { type: Number, default: 0 }
-  },
-  
-  hp: {
-    current: { type: Number, default: 10 },
-    max: { type: Number, default: 10 }
-  },
-
-  // DOTES Y RASGOS (Feats & Traits)
-  feats: [{
+    // BIOGRAFÍA
     name: { type: String, required: true },
-    type: { type: String, default: "General" }, // Ej: Combate, Magia, Racial, Clase
-    desc: { type: String, required: true }
-  }],
+    class: { type: String, default: "Guerrero" },
+    level: { type: Number, default: 1 },
+    race: { type: String, default: "Humano" },
+    deity: { type: String, default: "Ninguno" },
+    alignment: { type: String, default: "Neutral" },
+    size: { type: String, default: "Mediano" },
+    experience: { type: Number, default: 0 },
+    physicalWeight: { type: Number, default: 150 },
+    height: { type: Number, default: 70 },
 
-  // STATS (Usando los nombres que ya tienes en tu frontend)
-  stats: {
-    Fuerza: { type: Number, default: 10 },
-    Destreza: { type: Number, default: 10 },
-    Constitución: { type: Number, default: 10 },
-    Inteligencia: { type: Number, default: 10 },
-    Sabiduría: { type: Number, default: 10 },
-    Carisma: { type: Number, default: 10 }
+    // COMBATE BÁSICO
+    baseAttack: { type: Number, default: 0 }, // BAB
+    speed: { type: String, default: "30 ft" }, // Velocidad
+    initiativeMisc: { type: Number, default: 0 }, // Para dotes como Iniciativa Mejorada
+
+    traits: [
+      {
+        name: String,
+        description: String,
+        source: String,
+      },
+    ],
+
+    // ATAQUES Y ARMAS
+    attacks: [
+      {
+        name: { type: String, required: true }, // "Espada Larga de Hierro Frío"
+        attackBonus: { type: Number, default: 0 }, // El +1 mágico o bonos extra
+        damageDice: { type: String, default: "1d8" }, // "1d8", "2d6", etc.
+        damageBonus: { type: Number, default: 0 }, // Daño mágico extra
+        critRange: { type: String, default: "20" }, // "19-20" o "20"
+        critMultiplier: { type: String, default: "x2" }, // "x2", "x3"
+        type: { type: String, default: "Melee" }, // "Melee", "Ranged", "Finesse"
+        damageType: { type: String, default: "Cortante" }, // "Cortante", "Perforante"
+      },
+    ],
+
+    // BILLETERA
+    money: {
+      cp: { type: Number, default: 0 }, // Cobre (Copper)
+      sp: { type: Number, default: 0 }, // Plata (Silver)
+      gp: { type: Number, default: 0 }, // Oro (Gold)
+      pp: { type: Number, default: 0 }, // Platino (Platinum)
+    },
+
+    saves: {
+      fort: { type: Number, default: 0 },
+      ref: { type: Number, default: 0 },
+      will: { type: Number, default: 0 },
+    },
+
+    armorClass: {
+      armor: { type: Number, default: 0 },
+      shield: { type: Number, default: 0 },
+      natural: { type: Number, default: 0 },
+      misc: { type: Number, default: 0 },
+    },
+
+    hp: {
+      current: { type: Number, default: 10 },
+      max: { type: Number, default: 10 },
+    },
+
+    // DOTES Y RASGOS (Feats & Traits)
+    feats: [
+      {
+        name: { type: String, required: true },
+        type: { type: String, default: "General" }, // Ej: Combate, Magia, Racial, Clase
+        desc: { type: String, required: true },
+      },
+    ],
+
+    // STATS (Usando los nombres que ya tienes en tu frontend)
+    stats: {
+      Fuerza: { type: Number, default: 10 },
+      Destreza: { type: Number, default: 10 },
+      Constitución: { type: Number, default: 10 },
+      Inteligencia: { type: Number, default: 10 },
+      Sabiduría: { type: Number, default: 10 },
+      Carisma: { type: Number, default: 10 },
+    },
+
+    // HABILIDADES (SKILLS)
+    skills: {
+      type: [
+        {
+          name: String,
+          stat: String,
+          ranks: { type: Number, default: 0 },
+          miscModifier: { type: Number, default: 0 },
+          isClassSkill: { type: Boolean, default: false },
+        },
+      ],
+      default: defaultSkills,
+    },
+
+    // CARGA Y PESO
+    weight: {
+      current: { type: Number, default: 0 },
+      max: { type: Number, default: 100 }, // Basado en Fuerza usualmente
+    },
+
+    inventory: [
+      {
+        name: String,
+        weight: { type: Number, default: 0 },
+        desc: String,
+        icon: { type: String, default: "📦" },
+      },
+    ],
+
+    spells: [
+      {
+        name: String,
+        level: Number,
+        school: String,
+        desc: String,
+        prepared: { type: Boolean, default: false },
+      },
+    ],
+
+    notes: [
+      {
+        title: String,
+        content: String,
+        color: { type: String, default: "cyan" }, // Para tus post-its de colores
+        date: { type: Date, default: Date.now },
+      },
+    ],
   },
-
-  // HABILIDADES (SKILLS)
-  skills: {
-    type: [{
-      name: String,
-      stat: String,
-      ranks: { type: Number, default: 0 },
-      miscModifier: { type: Number, default: 0 },
-      isClassSkill: { type: Boolean, default: false }
-    }],
-    default: defaultSkills
+  {
+    timestamps: true,
   },
+);
 
-  // CARGA Y PESO
-  weight: {
-    current: { type: Number, default: 0 },
-    max: { type: Number, default: 100 } // Basado en Fuerza usualmente
-  },
-
-  inventory: [{
-    name: String,
-    weight: { type: Number, default: 0 },
-    desc: String,
-    icon: { type: String, default: '📦' }
-  }],
-
-  spells: [{
-    name: String,
-    level: Number,
-    school: String,
-    desc: String,
-    prepared: { type: Boolean, default: false }
-  }],
-
-  notes: [{
-    title: String,
-    content: String,
-    color: { type: String, default: 'cyan' }, // Para tus post-its de colores
-    date: { type: Date, default: Date.now }
-  }]
-}, { 
-  timestamps: true 
-});
-
-const Character = mongoose.model('Character', characterSchema);
+const Character = mongoose.model("Character", characterSchema);
 export default Character;
