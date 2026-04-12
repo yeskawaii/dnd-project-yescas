@@ -5,6 +5,16 @@ import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+router.get('/', protect, async (req, res) => {
+  try {
+    const characters = await Character.find({ user: req.user._id })
+                                      .populate('campaign', 'name'); 
+    res.json(characters);
+  } catch (error) {
+    res.status(500).json({ message: 'Error' });
+  }
+});
+
 // 1. CREAR UNA CONTIENDA (Modo DM)
 router.post('/create', protect, async (req, res) => {
   try {
@@ -29,33 +39,45 @@ router.post('/create', protect, async (req, res) => {
   }
 });
 
-// 2. UNIRSE A UNA CONTIENDA (Modo Jugador)
+// routes/campaignRoutes.js -> Cambia la ruta /join así:
 router.post('/join', protect, async (req, res) => {
   try {
     const { inviteCode, characterId } = req.body;
     const userId = req.user._id || req.user;
 
-    // Buscamos si existe una campaña con ese código
     const campaign = await Campaign.findOne({ inviteCode });
-    if (!campaign) {
-      return res.status(404).json({ message: 'Código de invitación inválido o expirado' });
-    }
+    if (!campaign) return res.status(404).json({ message: 'Código inválido' });
 
-    // Le pegamos el ID de la campaña al personaje del jugador
+    // LA CLAVE ESTÁ AQUÍ: Agregamos .populate() al final
     const character = await Character.findOneAndUpdate(
       { _id: characterId, user: userId }, 
       { campaign: campaign._id },
       { new: true }
+    ).populate('campaign', 'name'); // <--- AGREGA ESTO
+
+    if (!character) return res.status(404).json({ message: 'No se encontró el PJ' });
+
+    res.json({ message: 'Te uniste con éxito', character }); // Mandamos el character poblado
+  } catch (error) {
+    res.status(500).json({ message: 'Error al unirse' });
+  }
+});
+
+// Ruta para abandonar campaña
+router.post('/leave', protect, async (req, res) => {
+  try {
+    const { characterId } = req.body;
+    const userId = req.user._id || req.user;
+
+    const character = await Character.findOneAndUpdate(
+      { _id: characterId, user: userId }, 
+      { campaign: null },
+      { new: true }
     );
 
-    if (!character) {
-      return res.status(404).json({ message: 'Personaje no encontrado o no es tuyo' });
-    }
-
-    res.json({ message: 'Te uniste a la contienda con éxito', campaign });
+    res.json({ message: 'Has abandonado la contienda', character });
   } catch (error) {
-    console.error("🚨 Error al unirse:", error);
-    res.status(500).json({ message: 'Error al unirse a la contienda' });
+    res.status(500).json({ message: 'Error al salir' });
   }
 });
 

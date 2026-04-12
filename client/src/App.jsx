@@ -62,16 +62,35 @@ function App() {
 
   useEffect(() => {
     if (user) {
-      api.get("/character").then((res) => setCharacters(res.data)).catch(() => toast.error("Error de conexión"));
+      api.get("/character")
+        .then((res) => setCharacters(res.data.filter(Boolean)))
+        .catch(() => toast.error("Error de conexión"));
     }
   }, [user]);
 
-  // --- LOGICA DE ACTUALIZACIÓN ---
+  // --- HANDLERS LÓGICA ---
   const handleUpdateCharacter = (updatedData) => {
     api.patch(`/character/${selectedChar._id}/update`, updatedData).then((res) => {
       setSelectedChar(res.data);
-      toast.success("Héroe actualizado");
-    }).catch(() => toast.error("Fallo en la DB"));
+      setCharacters(prev => prev.map(c => c._id === res.data._id ? res.data : c));
+      toast.success("Actualizado");
+    }).catch(() => toast.error("Fallo DB"));
+  };
+
+  const handleJoinCampaign = (inviteCode, characterId) => {
+    api.post("/campaign/join", { inviteCode, characterId }).then((res) => {
+      toast.success(res.data.message);
+      setCharacters(characters.map(c => c._id === characterId ? res.data.character : c));
+    }).catch((err) => toast.error(err.response?.data?.message || "Error al unirse"));
+  };
+
+  const handleLeaveCampaign = (characterId) => {
+    askDelete("Abandonar Contienda", "¿Quieres dejar esta partida?", () => {
+      api.post("/campaign/leave", { characterId }).then((res) => {
+        toast.success("Héroe liberado");
+        setCharacters(characters.map(c => c._id === characterId ? { ...c, campaign: null } : c));
+      }).catch(() => toast.error("Error al salir"));
+    });
   };
 
   const handleFinalUpdate = (newValue) => {
@@ -89,7 +108,6 @@ function App() {
       case "class": updateData = { class: valToSave }; break;
       case "race": case "alignment": case "deity": case "speed": updateData = { [t]: valToSave }; break;
       case "level": updateData = { level: Number(valToSave) }; break;
-      case "bab": updateData = { baseAttack: Number(valToSave) }; break;
       case "init_misc": updateData = { initiativeMisc: Number(valToSave) }; break;
       case "stat": updateData = { stats: { ...selectedChar.stats, [editModal.statName]: Number(valToSave) } }; break;
       case "hp": updateData = { hp: { ...selectedChar.hp, current: Number(valToSave) } }; break;
@@ -97,31 +115,15 @@ function App() {
       case "ca_armor": updateData = { armorClass: { ...selectedChar.armorClass, armor: Number(valToSave) } }; break;
       case "weightMax": updateData = { weight: { ...selectedChar.weight, max: Number(valToSave) } }; break;
       case "save_fort": case "save_ref": case "save_will":
-        const sName = t.split("_")[1];
-        updateData = { saves: { ...selectedChar.saves, [sName]: Number(valToSave) } };
+        updateData = { saves: { ...selectedChar.saves, [t.split("_")[1]]: Number(valToSave) } };
         break;
-      case "cp": updateData = { money: { ...selectedChar.money, cp: Number(valToSave) } }; break;
-      case "sp": updateData = { money: { ...selectedChar.money, sp: Number(valToSave) } }; break;
-      case "gp": updateData = { money: { ...selectedChar.money, gp: Number(valToSave) } }; break;
-      case "pp": updateData = { money: { ...selectedChar.money, pp: Number(valToSave) } }; break;
       case "note":
         api.post(`/character/${selectedChar._id}/notes`, { title: "Diario", content: valToSave, color: "cyan" })
           .then((res) => setSelectedChar({ ...selectedChar, notes: [...(selectedChar.notes || []), res.data] }));
         setEditModal({ ...editModal, isOpen: false }); return;
-      case "edit_note":
-        api.patch(`/character/${selectedChar._id}/notes/${editModal.statName}`, { content: valToSave })
-          .then((res) => setSelectedChar({ ...selectedChar, notes: selectedChar.notes.map((n) => n._id === editModal.statName ? res.data : n) }));
-        setEditModal({ ...editModal, isOpen: false }); return;
     }
     handleUpdateCharacter(updateData);
     setEditModal({ ...editModal, isOpen: false });
-  };
-
-  const handleJoinCampaign = (inviteCode, characterId) => {
-    api.post("/campaign/join", { inviteCode, characterId }).then((res) => {
-      toast.success(res.data.message);
-      setCharacters(characters.map(c => c._id === characterId ? { ...c, campaign: res.data.campaign._id } : c));
-    }).catch((err) => toast.error(err.response?.data?.message || "Error al unirse"));
   };
 
   const openEdit = (title, label, value, type, statName = null) => {
@@ -144,45 +146,50 @@ function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans uppercase relative overflow-x-hidden">
       <Toaster position="top-center" richColors theme="dark" />
 
-      {/* 1. LOBBY */}
       {mode === "lobby" && <Lobby onSelectMode={(m) => setMode(m)} logout={logout} />}
-
-      {/* 2. DM DASHBOARD */}
       {mode === "dm" && <DMDashboard onBack={() => setMode("lobby")} />}
 
-      {/* 3. MODO JUGADOR */}
       {mode === "player" && (
         <>
           {!selectedChar ? (
-            /* SELECTOR DE PERSONAJES */
             <div className="min-h-screen p-8 flex flex-col items-center">
               <div className="w-full max-w-sm mb-6">
-                <button onClick={() => setMode("lobby")} className="text-cyan-500 font-black text-[10px] active:scale-95 transition-transform tracking-widest">← VOLVER AL LOBBY</button>
+                <button onClick={() => setMode("lobby")} className="text-cyan-500 font-black text-[10px] active:scale-95 italic">← VOLVER</button>
               </div>
               <h1 className="text-orange-500 font-black text-3xl mb-12 italic tracking-tighter">Aventureros</h1>
               <div className="grid gap-4 w-full max-w-sm">
                 {characters.map((c) => (
                   <motion.div whileTap={{ scale: 0.95 }} key={c._id} className="rounded-2xl bg-slate-900 border border-slate-800 p-4 flex items-center justify-between gap-3 shadow-lg">
                     <button onClick={() => setSelectedChar(c)} className="flex-1 text-left overflow-hidden">
-                      <h2 className="text-white font-black uppercase text-lg truncate">{c.name}</h2>
-                      <p className="text-slate-500 text-[10px] font-bold mt-1 tracking-widest">{c.class} • LVL {c.level}</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h2 className="text-white font-black uppercase text-lg truncate leading-none">{c.name}</h2>
+                        {c.campaign && (
+                          <div className="flex items-center gap-1 bg-orange-500/10 border border-orange-500/30 rounded-sm pr-1">
+                            <span className="text-orange-500 text-[7px] px-2 py-0.5 tracking-widest font-black">🗡️ {c.campaign.name || "..."}</span>
+                            <button onClick={(e) => { e.stopPropagation(); handleLeaveCampaign(c._id); }} className="text-orange-500/50 hover:text-orange-500 text-[8px] font-black px-1">✕</button>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-slate-500 text-[10px] font-bold tracking-widest">{c.class} • LVL {c.level}</p>
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); askDelete("Borrar Personaje", "¿Matar a este héroe?", () => api.delete(`/character/${c._id}`).then(() => setCharacters(characters.filter(char => char._id !== c._id)))); }} className="w-10 h-10 bg-red-500/10 text-red-500 rounded-xl active:scale-90 transition-all">🗑️</button>
+                    <button onClick={(e) => { e.stopPropagation(); askDelete("Borrar", "¿Eliminar héroe?", () => api.delete(`/character/${c._id}`).then(() => setCharacters(characters.filter(char => char._id !== c._id)))); }} className="w-10 h-10 bg-red-500/10 text-red-500 rounded-xl active:scale-90">🗑️</button>
                   </motion.div>
                 ))}
-                <button onClick={() => setIsJoinModalOpen(true)} className="w-full border-2 border-cyan-900/30 p-4 rounded-2xl text-cyan-600 font-black text-xs mt-4 active:bg-cyan-900/10 transition-colors uppercase italic tracking-widest">🔗 UNIRSE A CONTIENDA</button>
-                <button onClick={() => setIsCharModalOpen(true)} className="w-full border-2 border-dashed border-slate-800 p-4 rounded-2xl text-slate-600 font-black text-xs mt-2 active:bg-slate-900 transition-colors uppercase tracking-widest">+ CREAR NUEVO</button>
+                <button onClick={() => setIsJoinModalOpen(true)} className="w-full border-2 border-cyan-900/30 p-4 rounded-2xl text-cyan-600 font-black text-xs mt-4 active:bg-cyan-900/10 uppercase italic">🔗 UNIRSE A CONTIENDA</button>
+                <button onClick={() => setIsCharModalOpen(true)} className="w-full border-2 border-dashed border-slate-800 p-4 rounded-2xl text-slate-600 font-black text-xs mt-2 active:bg-slate-900 uppercase">+ CREAR NUEVO</button>
               </div>
             </div>
           ) : (
-            /* HOJA DE PERSONAJE SELECCIONADO */
             <div className="flex flex-col min-h-screen pb-24">
               <header className="px-6 py-4 pt-10 sticky top-0 z-50 bg-slate-950 border-b border-slate-800 flex justify-between items-center shadow-md">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-full flex items-center justify-center text-xl">{selectedChar.class === "Hechicero" ? "🪄" : "⚔️"}</div>
+                  <div className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-full flex items-center justify-center text-xl shadow-inner">{selectedChar.class === "Hechicero" ? "🪄" : "⚔️"}</div>
                   <div>
                     <h1 onClick={() => openEdit("Renombrar", "NOMBRE", selectedChar.name, "name")} className="text-xl font-black text-white active:text-orange-500 italic tracking-tighter leading-none">{selectedChar.name} ✎</h1>
-                    <p className="text-[9px] font-black text-slate-500 mt-1 uppercase tracking-widest">{selectedChar.class} LVL {selectedChar.level}</p>
+                    <p className="text-[9px] font-black text-slate-500 mt-1 uppercase tracking-widest flex items-center gap-2">
+                      <span>{selectedChar.class} LVL {selectedChar.level}</span>
+                      {selectedChar.campaign && <span className="bg-orange-500/10 border border-orange-500/30 text-orange-500 px-2 py-0.5 rounded-sm">🗡️ {selectedChar.campaign.name}</span>}
+                    </p>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -194,13 +201,13 @@ function App() {
               <div className="max-w-5xl mx-auto w-full px-4 mt-6">
                 <main>
                   <AnimatePresence mode="wait">
-                    <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                    <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
                       
-                      {/* PESTAÑA: STATS */}
                       {activeTab === "stats" && (
                         <div className="space-y-4">
                           <HealthTracker currentHp={selectedChar.hp?.current} maxHp={selectedChar.hp?.max} onEditHp={() => openEdit("HP", "ACTUAL", selectedChar.hp.current, "hp")} onEditMax={() => openEdit("Max HP", "MÁXIMO", selectedChar.hp.max, "maxHp")} />
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mt-6">
+                            
                             <CollapsibleSection title="Biografía y Físico">
                               <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                                 <button onClick={() => setUnitSystem(unitSystem === "imp" ? "metric" : "imp")} className="bg-orange-600/20 border border-orange-500/40 px-3 py-2 rounded-2xl text-[8px] font-black text-orange-500 flex-shrink-0 active:bg-orange-600/30 transition-colors">MODO: {unitSystem === "imp" ? "LB/FT" : "KG/CM"}</button>
@@ -214,115 +221,78 @@ function App() {
                                   <p className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">Altura</p>
                                   <p className="text-xs font-bold text-white tracking-tight">{unitSystem === "imp" ? `${selectedChar.height || 0}"` : `${inToCm(selectedChar.height || 0)} cm`}</p>
                                 </div>
-                                <div onClick={() => openEdit("Peso", "SIN EQUIPO", selectedChar.physicalWeight, "physicalWeight")} className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer active:bg-slate-800 transition-colors">
-                                  <p className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">Peso</p>
-                                  <p className="text-xs font-bold text-orange-400 tracking-tight">{unitSystem === "imp" ? `${selectedChar.physicalWeight || 0} lb` : `${lbToKg(selectedChar.physicalWeight || 0)} kg`}</p>
-                                </div>
                               </div>
                             </CollapsibleSection>
-                            
+
                             <CollapsibleSection title="Combate" defaultOpen={true}>
                               <div className="grid grid-cols-3 gap-3 mb-4 text-center">
                                 <div onClick={() => openEdit("Armadura", "EQUIPO", selectedChar.armorClass?.armor, "ca_armor")} className="bg-slate-900 border border-cyan-500/20 p-3 rounded-3xl active:bg-slate-800 transition-colors"><p className="text-[8px] font-black text-cyan-400 mb-1 tracking-widest">C. ARMADURA</p><span className="text-3xl font-black text-white">{totalCA}</span></div>
                                 <div onClick={() => openEdit("BAB", "BASE", selectedChar.baseAttack, "bab")} className="bg-slate-900 border border-orange-500/20 p-3 rounded-3xl active:bg-slate-800"><p className="text-[8px] font-black text-orange-400 mb-1 tracking-widest">BAB</p><span className="text-2xl font-black text-white">+{selectedChar.baseAttack || 0}</span></div>
                                 <div onClick={() => openEdit("Iniciativa", "MISC", selectedChar.initiativeMisc, "init_misc")} className="bg-slate-900 border border-purple-500/20 p-3 rounded-3xl active:bg-slate-800"><p className="text-[8px] font-black text-purple-400 mb-1 tracking-widest">INICIATIVA</p><span className="text-2xl font-black text-white">{dexMod + (selectedChar.initiativeMisc || 0) >= 0 ? "+" : ""}{dexMod + (selectedChar.initiativeMisc || 0)}</span></div>
                               </div>
-                              <div className="flex gap-2">
-                                {["fort", "ref", "will"].map((s) => (
-                                  <div key={s} onClick={() => openEdit(`Salvación ${s}`, s.toUpperCase(), selectedChar.saves?.[s], `save_${s}`)} className="flex-1 bg-slate-900/80 p-3 rounded-3xl border border-slate-800 text-center cursor-pointer active:bg-slate-800 transition-colors">
-                                    <span className="text-[7px] block font-black text-slate-600 mb-1">{s.toUpperCase()}</span>
-                                    <span className={`font-black text-sm ${s === "fort" ? "text-red-400" : s === "ref" ? "text-blue-400" : "text-purple-400"}`}>+{selectedChar.saves?.[s] || 0}</span>
-                                  </div>
-                                ))}
-                              </div>
                               <div className="mt-6 pt-4 border-t border-slate-800">
-                                <div className="flex justify-between items-center mb-3"><h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Armas Equipadas</h3><button onClick={() => setIsAttackModalOpen(true)} className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-2 py-1 rounded active:scale-95 transition-transform">+ AGREGAR</button></div>
-                                <div className="space-y-2">{selectedChar.attacks?.length > 0 ? selectedChar.attacks.map((atk) => <AttackCard key={atk._id} attack={atk} character={selectedChar} onDelete={(id) => askDelete("Destruir Arma", "¿Seguro?", () => api.delete(`/character/${selectedChar._id}/attacks/${id}`).then(() => {const up = selectedChar.attacks.filter(a => a._id !== id); handleUpdateCharacter({ attacks: up });}))} />) : <p className="text-center text-[10px] text-slate-600 italic py-4 italic">Sin armas registradas.</p>}</div>
+                                <div className="flex justify-between items-center mb-3"><h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic tracking-widest">Armas</h3><button onClick={() => setIsAttackModalOpen(true)} className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-2 py-1 rounded active:scale-95 tracking-tighter">+ AGREGAR</button></div>
+                                <div className="space-y-2">{selectedChar.attacks?.length > 0 ? selectedChar.attacks.map((atk) => <AttackCard key={atk._id} attack={atk} character={selectedChar} onDelete={(id) => askDelete("Eliminar", "¿Seguro?", () => api.delete(`/character/${selectedChar._id}/attacks/${id}`).then(() => handleUpdateCharacter({ attacks: selectedChar.attacks.filter(a => a._id !== id) })))} />) : <p className="text-center text-[10px] text-slate-600 italic py-4">Sin armas.</p>}</div>
                               </div>
-                            </CollapsibleSection>
-
-                            <CollapsibleSection title="Atributos">
-                               <div className="grid grid-cols-2 gap-4 mt-4">
-                                 {Object.entries(selectedChar.stats || {}).map(([stat, val]) => (
-                                   <StatCard key={stat} label={stat} value={val} onClick={() => openEdit(`Ajustar ${stat}`, "VALOR", val, "stat", stat)} />
-                                 ))}
-                               </div>
                             </CollapsibleSection>
 
                             <CollapsibleSection title="Habilidades (Skills)">
-                              <div className="mt-2 md:max-h-[500px] md:overflow-y-auto pr-1 custom-scrollbar">
-                                <SkillTable character={selectedChar} onUpdateSkill={(newSkillsArray) => handleUpdateCharacter({ skills: newSkillsArray })} onOpenAddModal={() => setIsSkillModalOpen(true)} />
-                              </div>
+                              <SkillTable character={selectedChar} onUpdateSkill={(up) => handleUpdateCharacter({ skills: up })} onOpenAddModal={() => setIsSkillModalOpen(true)} />
                             </CollapsibleSection>
 
                             <CollapsibleSection title="Rasgos de Raza y Clase">
-                              <div className="flex justify-between mb-2"><span className="text-[8px] font-black text-slate-500 uppercase italic tracking-widest">Innatas</span><button onClick={() => setIsTraitModalOpen(true)} className="text-[9px] font-black text-blue-500 active:scale-95 uppercase tracking-widest">+ AGREGAR</button></div>
-                              {selectedChar.traits?.length > 0 ? selectedChar.traits.map(t => <TraitCard key={t._id} trait={t} onDelete={(id) => askDelete("Olvidar Rasgo", "¿Eliminarlo?", () => { const up = selectedChar.traits.filter(x => x._id !== id); handleUpdateCharacter({ traits: up }); })} />) : <p className="text-center text-[10px] text-slate-600 italic py-4">No tienes rasgos aún.</p>}
+                              <div className="flex justify-between mb-2"><span className="text-[8px] font-black text-slate-500 uppercase italic">Innatas</span><button onClick={() => setIsTraitModalOpen(true)} className="text-[9px] font-black text-blue-500 active:scale-95 uppercase">+ AGREGAR</button></div>
+                              {selectedChar.traits?.map(t => <TraitCard key={t._id} trait={t} onDelete={(id) => askDelete("Olvidar", "¿Seguro?", () => handleUpdateCharacter({ traits: selectedChar.traits.filter(x => x._id !== id) }))} />)}
                             </CollapsibleSection>
-
-                            <CollapsibleSection title="Dotes (Feats)">
-                              <div className="flex justify-between mb-2"><span className="text-[8px] font-black text-slate-500 uppercase italic tracking-widest">Logros de nivel</span><button onClick={() => setIsFeatModalOpen(true)} className="text-[9px] font-black text-emerald-500 active:scale-95 uppercase tracking-widest">+ AGREGAR</button></div>
-                              {selectedChar.feats?.length > 0 ? selectedChar.feats.map(f => <FeatCard key={f._id} feat={f} onDelete={(id) => askDelete("Olvidar Dote", "¿Eliminarlo?", () => api.delete(`/character/${selectedChar._id}/feats/${id}`).then(() => { const up = selectedChar.feats.filter(x => x._id !== id); handleUpdateCharacter({ feats: up }); }))} />) : <p className="text-center text-[10px] text-slate-600 italic py-4">Sin dotes registradas.</p>}
-                            </CollapsibleSection>
-                          </div>
-                          
-                          <div className="mt-8 px-2">
-                            <div className="flex justify-between items-end mb-2"><span className="text-[8px] font-black text-slate-600 tracking-widest uppercase italic">Mochila ({totalWeight} lb)</span><span onClick={() => openEdit("Máximo", "CARGA MAX", selectedChar.weight?.max, "weightMax")} className="text-[10px] font-black text-white active:text-cyan-400">MAX: {selectedChar.weight?.max || 100} LB</span></div>
-                            <div className="w-full h-1.5 bg-slate-900 rounded-full border border-slate-800 overflow-hidden"><div className="h-full bg-cyan-500 transition-all duration-1000" style={{ width: `${Math.min((totalWeight / (selectedChar.weight?.max || 100)) * 100, 100)}%` }} /></div>
                           </div>
                         </div>
                       )}
 
-                      {/* PESTAÑA: INVENTARIO */}
                       {activeTab === "inv" && (
                         <div className="space-y-6">
-                          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-4 relative overflow-hidden">
+                          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-4 shadow-2xl">
                             <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 italic">🪙 Monedero</h3>
                             <div className="grid grid-cols-4 gap-2">
-                              <motion.div whileTap={{ scale: 0.9 }} onClick={() => openEdit("Cobre", "PC", selectedChar.money?.cp, "cp")} className="bg-slate-950 border border-[#b87333]/30 rounded-2xl p-2 flex flex-col items-center justify-center active:bg-slate-900 transition-colors cursor-pointer"><span className="text-[9px] font-black text-[#b87333]">PC</span><span className="font-black text-white text-sm">{selectedChar.money?.cp || 0}</span></motion.div>
-                              <motion.div whileTap={{ scale: 0.9 }} onClick={() => openEdit("Plata", "PP", selectedChar.money?.sp, "sp")} className="bg-slate-950 border border-slate-400/30 rounded-2xl p-2 flex flex-col items-center justify-center active:bg-slate-900 transition-colors cursor-pointer"><span className="text-[9px] font-black text-slate-400">PP</span><span className="font-black text-white text-sm">{selectedChar.money?.sp || 0}</span></motion.div>
-                              <motion.div whileTap={{ scale: 0.9 }} onClick={() => openEdit("Oro", "PO", selectedChar.money?.gp, "gp")} className="bg-slate-950 border border-yellow-500/40 rounded-2xl p-2 flex flex-col items-center justify-center active:bg-slate-900 transition-colors cursor-pointer"><span className="text-[9px] font-black text-yellow-500">PO</span><span className="font-black text-white text-sm">{selectedChar.money?.gp || 0}</span></motion.div>
-                              <motion.div whileTap={{ scale: 0.9 }} onClick={() => openEdit("Platino", "PPT", selectedChar.money?.pp, "pp")} className="bg-slate-950 border border-cyan-400/40 rounded-2xl p-2 flex flex-col items-center justify-center active:bg-slate-900 transition-colors cursor-pointer"><span className="text-[9px] font-black text-cyan-400">PPT</span><span className="font-black text-white text-sm">{selectedChar.money?.pp || 0}</span></motion.div>
+                              {["cp", "sp", "gp", "pp"].map(coin => (
+                                <motion.div key={coin} whileTap={{ scale: 0.9 }} onClick={() => openEdit(coin.toUpperCase(), coin.toUpperCase(), selectedChar.money?.[coin], coin)} className="bg-slate-950 border border-slate-800 rounded-2xl p-2 flex flex-col items-center justify-center cursor-pointer active:bg-slate-900 transition-colors">
+                                  <span className="text-[9px] font-black text-slate-500">{coin.toUpperCase()}</span>
+                                  <span className="font-black text-white text-sm">{selectedChar.money?.[coin] || 0}</span>
+                                </motion.div>
+                              ))}
                             </div>
                           </div>
                           <div>
                             <h2 className="text-2xl font-black text-white mb-4 italic tracking-tighter">Mochila</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                              {selectedChar.inventory?.map((i) => <InventoryItem key={i._id} item={i} onDelete={(id) => askDelete("Tirar Objeto", "¿Seguro?", () => api.delete(`/character/${selectedChar._id}/inventory/${id}`).then(() => { const up = selectedChar.inventory.filter(x => x._id !== id); handleUpdateCharacter({ inventory: up }); }))} onEdit={() => { setEditingItem(i); setIsModalOpen(true); }} />)}
+                              {selectedChar.inventory?.map((i) => <InventoryItem key={i._id} item={i} onDelete={(id) => askDelete("Tirar", "¿Borrar?", () => handleUpdateCharacter({ inventory: selectedChar.inventory.filter(x => x._id !== id) }))} onEdit={() => { setEditingItem(i); setIsModalOpen(true); }} />)}
                             </div>
-                            <button onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className="w-full mt-6 border-2 border-dashed border-slate-800 p-4 rounded-2xl text-slate-600 font-black text-[10px] active:bg-slate-900 active:text-white transition-colors uppercase">+ AGREGAR OBJETO</button>
+                            <button onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className="w-full mt-6 border-2 border-dashed border-slate-800 p-4 rounded-2xl text-slate-600 font-black text-[10px] active:bg-slate-900 uppercase shadow-xl">+ AGREGAR OBJETO</button>
                           </div>
                         </div>
                       )}
 
-                      {/* PESTAÑA: HECHIZOS */}
                       {activeTab === "spells" && (
-                        <div>
+                        <div className="pb-10">
                           <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-black text-white italic tracking-tighter">Grimorio</h2>
-                            <button onClick={() => { setEditingSpell(null); setIsSpellModalOpen(true); }} className="bg-cyan-600 px-4 py-1.5 rounded-full text-[10px] font-black active:bg-cyan-500 transition-colors shadow-lg active:scale-95">+ APRENDER</button>
+                            <button onClick={() => { setEditingSpell(null); setIsSpellModalOpen(true); }} className="bg-cyan-600 px-4 py-1.5 rounded-full text-[10px] font-black active:bg-cyan-500 shadow-lg shadow-cyan-900/30 active:scale-95">+ APRENDER</button>
                           </div>
-                          <div className="flex gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800 w-max mb-6">
-                            <button onClick={() => setSpellSortBy("level")} className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-md transition-colors ${spellSortBy === "level" ? "bg-cyan-600/20 text-cyan-500" : "text-slate-500 active:text-white"}`}>Nivel</button>
-                            <button onClick={() => setSpellSortBy("alpha")} className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-md transition-colors ${spellSortBy === "alpha" ? "bg-slate-800 text-white" : "text-slate-500 active:text-white"}`}>A-Z</button>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
-                            {[...(selectedChar.spells || [])].sort((a,b) => spellSortBy === "alpha" ? a.name.localeCompare(b.name) : a.level - b.level).map((s) => (
-                              <SpellCard key={s._id} spell={s} onToggle={(id) => api.patch(`/character/${selectedChar._id}/spells/${id}`).then(r => { const up = selectedChar.spells.map(x => x._id === id ? r.data : x); handleUpdateCharacter({ spells: up }); })} onDelete={(id) => askDelete("Olvidar Hechizo", "¿Borrar este hechizo?", () => api.delete(`/character/${selectedChar._id}/spells/${id}`).then(() => { const up = selectedChar.spells.filter(x => x._id !== id); handleUpdateCharacter({ spells: up }); }))} onEdit={() => { setEditingSpell(s); setIsSpellModalOpen(true); }} />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {selectedChar.spells?.sort((a,b) => a.level - b.level).map((s) => (
+                              <SpellCard key={s._id} spell={s} onToggle={(id) => api.patch(`/character/${selectedChar._id}/spells/${id}`).then(r => handleUpdateCharacter({ spells: selectedChar.spells.map(x => x._id === id ? r.data : x) }))} onDelete={(id) => askDelete("Olvidar", "¿Borrar?", () => handleUpdateCharacter({ spells: selectedChar.spells.filter(x => x._id !== id) }))} onEdit={() => { setEditingSpell(s); setIsSpellModalOpen(true); }} />
                             ))}
                           </div>
                         </div>
                       )}
 
-                      {/* PESTAÑA: NOTAS */}
                       {activeTab === "notes" && (
-                        <div>
+                        <div className="pb-10">
                           <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-black text-white italic tracking-tighter">Diario</h2>
                             <button onClick={() => openEdit("Nota", "DIARIO", "", "note")} className="bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-full text-[10px] font-black active:bg-slate-700 transition-all shadow-lg active:scale-95 uppercase">+ ESCRIBIR</button>
                           </div>
-                          <div className="columns-1 md:columns-2 gap-4 pb-10">
-                            {selectedChar.notes?.map((n) => <NoteCard key={n._id} note={n} onDelete={(id) => askDelete("Quemar Nota", "¿Arrancar página?", () => api.delete(`/character/${selectedChar._id}/notes/${id}`).then(() => { const up = selectedChar.notes.filter(x => x._id !== id); handleUpdateCharacter({ notes: up }); }))} onEdit={() => openEdit("Editar Nota", "DIARIO", n.content, "edit_note", n._id)} />)}
+                          <div className="columns-1 md:columns-2 gap-4">
+                            {selectedChar.notes?.map((n) => <NoteCard key={n._id} note={n} onDelete={(id) => askDelete("Quemar", "¿Borrar?", () => handleUpdateCharacter({ notes: selectedChar.notes.filter(x => x._id !== id) }))} onEdit={() => openEdit("Editar Nota", "DIARIO", n.content, "edit_note", n._id)} />)}
                           </div>
                         </div>
                       )}
@@ -332,7 +302,6 @@ function App() {
                 </main>
               </div>
 
-              {/* NAV CELULAR */}
               <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-slate-900/95 backdrop-blur-md border border-white/10 px-6 py-3 flex justify-between items-center z-40 rounded-3xl shadow-2xl">
                 {[{ id: "stats", icon: "⚔️", label: "Stats" }, { id: "inv", icon: "🎒", label: "Mochila" }, { id: "spells", icon: "🪄", label: "Spells" }, { id: "notes", icon: "📜", label: "Notas" }].map((tab) => (
                   <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`relative flex flex-col items-center transition-all ${activeTab === tab.id ? "text-cyan-400 scale-110" : "text-slate-500"}`}>
@@ -346,11 +315,11 @@ function App() {
         </>
       )}
 
-      {/* --- MODALES GLOBALES (SÓLO AQUÍ) --- */}
+      {/* --- MODALES GLOBALES --- */}
       <ConfirmDeleteModal isOpen={deleteAlert.isOpen} title={deleteAlert.title} message={deleteAlert.msg} onClose={() => setDeleteAlert({ ...deleteAlert, isOpen: false })} onConfirm={() => { deleteAlert.action(); setDeleteAlert({ ...deleteAlert, isOpen: false }); }} />
       <JoinCampaignModal isOpen={isJoinModalOpen} onClose={() => setIsJoinModalOpen(false)} onJoin={handleJoinCampaign} characters={characters} />
       <UpdateValueModal isOpen={editModal.isOpen} title={editModal.title} label={editModal.label} initialValue={editModal.value} type={editModal.type} onClose={() => setEditModal({ ...editModal, isOpen: false })} onUpdate={handleFinalUpdate} />
-      <AddCharacterModal isOpen={isCharModalOpen} onClose={() => setIsCharModalOpen(false)} onAdd={(d) => api.post("/character", d).then((r) => { setCharacters([...characters, r.data]); setSelectedChar(r.data); })} />
+      <AddCharacterModal isOpen={isCharModalOpen} onClose={() => setIsCharModalOpen(false)} onAdd={(d) => api.post("/character", d).then((r) => { setCharacters([...characters, r.data]); setSelectedChar(r.data); mode === "lobby" && setMode("player"); })} />
       <AddTraitModal isOpen={isTraitModalOpen} onClose={() => setIsTraitModalOpen(false)} onAdd={(newTrait) => handleUpdateCharacter({ traits: [...(selectedChar.traits || []), newTrait] })} />
       <AddItemModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingItem(null); }} onAdd={(i) => api.post(`/character/${selectedChar._id}/inventory`, i).then((r) => handleUpdateCharacter({ inventory: [...selectedChar.inventory, r.data] }))} onEdit={(id, data) => api.patch(`/character/${selectedChar._id}/inventory/${id}`, data).then((r) => handleUpdateCharacter({ inventory: selectedChar.inventory.map((i) => (i._id === id ? r.data : i)) }))} itemToEdit={editingItem} />
       <AddSpellModal isOpen={isSpellModalOpen} onClose={() => { setIsSpellModalOpen(false); setEditingSpell(null); }} onAdd={(s) => api.post(`/character/${selectedChar._id}/spells`, s).then((r) => handleUpdateCharacter({ spells: [...selectedChar.spells, r.data] }))} onEdit={(id, data) => api.patch(`/character/${selectedChar._id}/spells/${id}`, data).then((r) => handleUpdateCharacter({ spells: selectedChar.spells.map((s) => (s._id === id ? r.data : s)) }))} spellToEdit={editingSpell} />
