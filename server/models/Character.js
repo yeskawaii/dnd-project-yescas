@@ -68,6 +68,12 @@ const characterSchema = new mongoose.Schema(
       },
     ],
 
+    campaign: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Campaign",
+      default: null,
+    },
+
     // ATAQUES Y ARMAS
     attacks: [
       {

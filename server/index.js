@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 // Importas tus rutas
 import characterRoutes from './routes/characters.js';
 import authRoutes from './routes/auth.js';
+import campaignRoutes from './routes/campaignRoutes.js';
 
 dotenv.config();
 const app = express();
@@ -21,6 +22,7 @@ mongoose.connect(process.env.MONGO_URI)
 // REGISTRO DE RUTAS
 app.use('/api/auth', authRoutes);
 app.use('/api/character', characterRoutes);
+app.use('/api/campaign', campaignRoutes);
 
 app.get('/api/health', (req, res) => {
   const dbStatus = mongoose.connection.readyState;
