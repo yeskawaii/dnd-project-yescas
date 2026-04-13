@@ -9,7 +9,8 @@ router.use(protect);
 // 1. GET: Obtener TODOS los personajes
 router.get('/', async (req, res) => {
   try {
-    const characters = await Character.find({ user: req.user });
+    const characters = await Character.find({ user: req.user })
+                                      .populate('campaign', 'name'); 
     res.json(characters);
   } catch (err) {
     res.status(500).json({ error: "Error al pedir la lista de aventureros" });
@@ -67,7 +68,7 @@ router.delete('/:charId', async (req, res) => {
   }
 });
 
-// 4. PATCH: ACTUALIZACIÓN MAESTRA (Dinámica)
+// 4. PATCH: ACTUALIZACIÓN MAESTRA
 router.patch('/:charId/update', async (req, res) => {
   try {
     const updates = req.body;
@@ -75,12 +76,11 @@ router.patch('/:charId/update', async (req, res) => {
       req.params.charId,
       { $set: updates },
       { new: true, runValidators: true }
-    );
+    ).populate('campaign', 'name');
 
     if (!updatedChar) return res.status(404).json({ error: "No se encontró el personaje" });
     res.json(updatedChar);
   } catch (err) {
-    console.error("Error al actualizar:", err);
     res.status(500).json({ error: "No se pudo actualizar el personaje" });
   }
 });
