@@ -78,7 +78,6 @@ function App() {
   const handleJoinCampaign = (inviteCode, characterId) => {
     api.post("/campaign/join", { inviteCode, characterId }).then((res) => {
       toast.success(res.data.message);
-      // El backend debe devolver { character: { ...poblado } }
       setCharacters(characters.map(c => c._id === characterId ? res.data.character : c));
     }).catch((err) => toast.error(err.response?.data?.message || "Error al unirse"));
   };
@@ -108,6 +107,8 @@ function App() {
       case "race": case "alignment": case "deity": case "speed": updateData = { [t]: valToSave }; break;
       case "level": updateData = { level: Number(valToSave) }; break;
       case "experience": updateData = { experience: Number(valToSave) }; break;
+      case "height": updateData = { height: Number(valToSave) }; break;
+      case "physicalWeight": updateData = { physicalWeight: Number(valToSave) }; break;
       case "init_misc": updateData = { initiativeMisc: Number(valToSave) }; break;
       case "stat": updateData = { stats: { ...selectedChar.stats, [editModal.statName]: Number(valToSave) } }; break;
       case "hp": updateData = { hp: { ...selectedChar.hp, current: Number(valToSave) } }; break;
@@ -117,11 +118,28 @@ function App() {
       case "save_fort": case "save_ref": case "save_will":
         updateData = { saves: { ...selectedChar.saves, [t.split("_")[1]]: Number(valToSave) } };
         break;
+      case "cp": updateData = { money: { ...selectedChar.money, cp: Number(valToSave) } }; break;
+      case "sp": updateData = { money: { ...selectedChar.money, sp: Number(valToSave) } }; break;
+      case "gp": updateData = { money: { ...selectedChar.money, gp: Number(valToSave) } }; break;
+      case "pp": updateData = { money: { ...selectedChar.money, pp: Number(valToSave) } }; break;
       case "note":
         api.post(`/character/${selectedChar._id}/notes`, { title: "Diario", content: valToSave, color: "cyan" })
-          .then((res) => setSelectedChar({ ...selectedChar, notes: [...(selectedChar.notes || []), res.data] }));
+          .then((res) => {
+            const updatedChar = { ...selectedChar, notes: [...(selectedChar.notes || []), res.data] };
+            setSelectedChar(updatedChar);
+            setCharacters(prev => prev.map(c => c._id === updatedChar._id ? updatedChar : c));
+          });
+        setEditModal({ ...editModal, isOpen: false }); return;
+      case "edit_note":
+        api.patch(`/character/${selectedChar._id}/notes/${editModal.statName}`, { content: valToSave })
+          .then((res) => {
+            const updatedChar = { ...selectedChar, notes: selectedChar.notes.map((n) => n._id === editModal.statName ? res.data : n) };
+            setSelectedChar(updatedChar);
+            setCharacters(prev => prev.map(c => c._id === updatedChar._id ? updatedChar : c));
+          });
         setEditModal({ ...editModal, isOpen: false }); return;
     }
+    
     handleUpdateCharacter(updateData);
     setEditModal({ ...editModal, isOpen: false });
   };
@@ -189,7 +207,7 @@ function App() {
                   <div>
                     <h1 onClick={() => openEdit("Renombrar", "NOMBRE", selectedChar.name, "name")} className="text-xl font-black text-white active:text-orange-500 italic tracking-tighter leading-none">{selectedChar.name} ✎</h1>
                     <div className="flex items-center gap-2 mt-1">
-                      <p className="text-[9px] font-black text-slate-500 mt-1 uppercase tracking-widest flex items-center gap-2">
+                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                         <span 
                           onClick={() => openEdit("Nivel", "NIVEL ACTUAL", selectedChar.level, "level")} 
                           className="cursor-pointer active:text-white transition-colors"
@@ -212,7 +230,6 @@ function App() {
               </header>
 
               <div className="max-w-5xl mx-auto w-full px-4 mt-6">
-                {/* NAV DESKTOP (EL QUE FALTABA) */}
                 <nav className="hidden md:flex justify-center gap-2 mb-8 bg-slate-900/50 p-2 rounded-2xl border border-slate-800 w-max mx-auto shadow-lg backdrop-blur-sm">
                   {[{ id: "stats", icon: "⚔️", label: "Stats" }, { id: "inv", icon: "🎒", label: "Mochila" }, { id: "spells", icon: "🪄", label: "Spells" }, { id: "notes", icon: "📜", label: "Notas" }].map((tab) => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`relative flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase ${activeTab === tab.id ? "text-cyan-400 bg-cyan-500/10" : "text-slate-500 active:text-slate-300 active:bg-slate-800/50"} transition-all duration-300`}>
@@ -274,7 +291,7 @@ function App() {
                                 ))}
                               </div>
                               <div className="mt-6 pt-4 border-t border-slate-800">
-                                <div className="flex justify-between items-center mb-3"><h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic tracking-widest">Armas</h3><button onClick={() => setIsAttackModalOpen(true)} className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-2 py-1 rounded active:scale-95 transition-transform tracking-tighter">+ AGREGAR</button></div>
+                                <div className="flex justify-between items-center mb-3"><h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic tracking-widest">Armas Equipadas</h3><button onClick={() => setIsAttackModalOpen(true)} className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-2 py-1 rounded active:scale-95 transition-transform tracking-tighter">+ AGREGAR</button></div>
                                 <div className="space-y-2">{selectedChar.attacks?.length > 0 ? selectedChar.attacks.map((atk) => <AttackCard key={atk._id} attack={atk} character={selectedChar} onDelete={(id) => askDelete("Eliminar", "¿Seguro?", () => api.delete(`/character/${selectedChar._id}/attacks/${id}`).then(() => handleUpdateCharacter({ attacks: selectedChar.attacks.filter(a => a._id !== id) })))} />) : <p className="text-center text-[10px] text-slate-600 italic py-4">Desarmado.</p>}</div>
                               </div>
                             </CollapsibleSection>
@@ -301,7 +318,7 @@ function App() {
                                 </div>
                                 <div>
                                   <div className="flex justify-between mb-2"><span className="text-[8px] font-black text-slate-500 uppercase italic">Logros</span><button onClick={() => setIsFeatModalOpen(true)} className="text-[9px] font-black text-emerald-500 active:scale-95 uppercase tracking-widest">+ AGREGAR</button></div>
-                                  {selectedChar.feats?.length > 0 ? selectedChar.feats.map(f => <FeatCard key={f._id} feat={f} onDelete={(id) => askDelete("Olvidar", "¿Eliminar?", () => handleUpdateCharacter({ feats: selectedChar.feats.filter(x => x._id !== id) }))} />) : <p className="text-center text-[10px] text-slate-600 italic py-4 italic">Sin dotes.</p>}
+                                  {selectedChar.feats?.length > 0 ? selectedChar.feats.map(f => <FeatCard key={f._id} feat={f} onDelete={(id) => askDelete("Olvidar", "¿Eliminar?", () => api.delete(`/character/${selectedChar._id}/feats/${id}`).then(() => handleUpdateCharacter({ feats: selectedChar.feats.filter(x => x._id !== id) })))} />) : <p className="text-center text-[10px] text-slate-600 italic py-4 italic">Sin dotes.</p>}
                                 </div>
                               </div>
                             </CollapsibleSection>
@@ -333,7 +350,7 @@ function App() {
                           <div>
                             <h2 className="text-2xl font-black text-white mb-4 italic tracking-tighter">Mochila</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                              {selectedChar.inventory?.map((i) => <InventoryItem key={i._id} item={i} onDelete={(id) => askDelete("Tirar", "¿Borrar?", () => handleUpdateCharacter({ inventory: selectedChar.inventory.filter(x => x._id !== id) }))} onEdit={() => { setEditingItem(i); setIsModalOpen(true); }} />)}
+                              {selectedChar.inventory?.map((i) => <InventoryItem key={i._id} item={i} onDelete={(id) => askDelete("Tirar", "¿Borrar?", () => api.delete(`/character/${selectedChar._id}/inventory/${id}`).then(() => handleUpdateCharacter({ inventory: selectedChar.inventory.filter(x => x._id !== id) })))} onEdit={() => { setEditingItem(i); setIsModalOpen(true); }} />)}
                             </div>
                             <button onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className="w-full mt-6 border-2 border-dashed border-slate-800 p-4 rounded-2xl text-slate-600 font-black text-[10px] active:bg-slate-900 uppercase shadow-xl transition-colors tracking-widest">+ AGREGAR OBJETO</button>
                           </div>
@@ -361,7 +378,7 @@ function App() {
                             <button onClick={() => openEdit("Nota", "DIARIO", "", "note")} className="bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-full text-[10px] font-black active:bg-slate-700 transition-all shadow-lg active:scale-95 uppercase tracking-widest">+ ESCRIBIR</button>
                           </div>
                           <div className="columns-1 md:columns-2 gap-4">
-                            {selectedChar.notes?.map((n) => <NoteCard key={n._id} note={n} onDelete={(id) => askDelete("Quemar", "¿Borrar?", () => handleUpdateCharacter({ notes: selectedChar.notes.filter(x => x._id !== id) }))} onEdit={() => openEdit("Editar Nota", "DIARIO", n.content, "edit_note", n._id)} />)}
+                            {selectedChar.notes?.map((n) => <NoteCard key={n._id} note={n} onDelete={(id) => askDelete("Quemar", "¿Borrar?", () => api.delete(`/character/${selectedChar._id}/notes/${id}`).then(() => handleUpdateCharacter({ notes: selectedChar.notes.filter(x => x._id !== id) })))} onEdit={() => openEdit("Editar Nota", "DIARIO", n.content, "edit_note", n._id)} />)}
                           </div>
                         </div>
                       )}
@@ -371,7 +388,6 @@ function App() {
                 </main>
               </div>
 
-              {/* NAV CELULAR */}
               <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-slate-900/95 backdrop-blur-md border border-white/10 px-6 py-3 flex justify-between items-center z-40 rounded-3xl shadow-2xl">
                 {[{ id: "stats", icon: "⚔️", label: "Stats" }, { id: "inv", icon: "🎒", label: "Mochila" }, { id: "spells", icon: "🪄", label: "Spells" }, { id: "notes", icon: "📜", label: "Notas" }].map((tab) => (
                   <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`relative flex flex-col items-center transition-all ${activeTab === tab.id ? "text-cyan-400 scale-110" : "text-slate-500"}`}>
