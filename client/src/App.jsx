@@ -62,9 +62,7 @@ function App() {
 
   useEffect(() => {
     if (user) {
-      api.get("/character")
-        .then((res) => setCharacters(res.data.filter(Boolean)))
-        .catch(() => toast.error("Error de conexión"));
+      api.get("/character").then((res) => setCharacters(res.data.filter(Boolean))).catch(() => toast.error("Error de conexión"));
     }
   }, [user]);
 
@@ -108,6 +106,7 @@ function App() {
       case "class": updateData = { class: valToSave }; break;
       case "race": case "alignment": case "deity": case "speed": updateData = { [t]: valToSave }; break;
       case "level": updateData = { level: Number(valToSave) }; break;
+      case "experience": updateData = { experience: Number(valToSave) }; break;
       case "init_misc": updateData = { initiativeMisc: Number(valToSave) }; break;
       case "stat": updateData = { stats: { ...selectedChar.stats, [editModal.statName]: Number(valToSave) } }; break;
       case "hp": updateData = { hp: { ...selectedChar.hp, current: Number(valToSave) } }; break;
@@ -152,9 +151,10 @@ function App() {
       {mode === "player" && (
         <>
           {!selectedChar ? (
+            /* SELECTOR DE PERSONAJES */
             <div className="min-h-screen p-8 flex flex-col items-center">
               <div className="w-full max-w-sm mb-6">
-                <button onClick={() => setMode("lobby")} className="text-cyan-500 font-black text-[10px] active:scale-95 italic">← VOLVER</button>
+                <button onClick={() => setMode("lobby")} className="text-cyan-500 font-black text-[10px] active:scale-95 italic tracking-widest">← VOLVER AL LOBBY</button>
               </div>
               <h1 className="text-orange-500 font-black text-3xl mb-12 italic tracking-tighter">Aventureros</h1>
               <div className="grid gap-4 w-full max-w-sm">
@@ -180,20 +180,25 @@ function App() {
               </div>
             </div>
           ) : (
+            /* HOJA DE PERSONAJE SELECCIONADO */
             <div className="flex flex-col min-h-screen pb-24">
               <header className="px-6 py-4 pt-10 sticky top-0 z-50 bg-slate-950 border-b border-slate-800 flex justify-between items-center shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-full flex items-center justify-center text-xl shadow-inner">{selectedChar.class === "Hechicero" ? "🪄" : "⚔️"}</div>
                   <div>
                     <h1 onClick={() => openEdit("Renombrar", "NOMBRE", selectedChar.name, "name")} className="text-xl font-black text-white active:text-orange-500 italic tracking-tighter leading-none">{selectedChar.name} ✎</h1>
-                    <p className="text-[9px] font-black text-slate-500 mt-1 uppercase tracking-widest flex items-center gap-2">
-                      <span>{selectedChar.class} LVL {selectedChar.level}</span>
-                      {selectedChar.campaign && <span className="bg-orange-500/10 border border-orange-500/30 text-orange-500 px-2 py-0.5 rounded-sm">🗡️ {selectedChar.campaign.name}</span>}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                        <span>{selectedChar.class} LVL {selectedChar.level}</span>
+                        {selectedChar.campaign && <span className="bg-orange-500/10 border border-orange-500/30 text-orange-500 px-2 py-0.5 rounded-sm">🗡️ {selectedChar.campaign.name}</span>}
+                      </p>
+                      <span className="text-slate-700 text-[8px]">•</span>
+                      <span onClick={() => openEdit("Experiencia", "XP TOTAL", selectedChar.experience || 0, "experience")} className="text-[9px] font-black text-cyan-600 cursor-pointer active:text-cyan-400">XP: {selectedChar.experience || 0} ✎</span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => setSelectedChar(null)} className="w-8 h-8 bg-slate-900 rounded-xl text-slate-400 flex items-center justify-center text-xs active:scale-95">🔄</button>
+                  <button onClick={() => setSelectedChar(null)} className="w-8 h-8 bg-slate-900 rounded-xl text-slate-400 flex items-center justify-center text-xs active:scale-95 transition-colors">🔄</button>
                   <button onClick={logout} className="w-8 h-8 bg-red-950/30 text-red-500 rounded-xl flex items-center justify-center text-xs active:scale-95">🚪</button>
                 </div>
               </header>
@@ -206,8 +211,8 @@ function App() {
                       {activeTab === "stats" && (
                         <div className="space-y-4">
                           <HealthTracker currentHp={selectedChar.hp?.current} maxHp={selectedChar.hp?.max} onEditHp={() => openEdit("HP", "ACTUAL", selectedChar.hp.current, "hp")} onEditMax={() => openEdit("Max HP", "MÁXIMO", selectedChar.hp.max, "maxHp")} />
+                          
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mt-6">
-                            
                             <CollapsibleSection title="Biografía y Físico">
                               <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                                 <button onClick={() => setUnitSystem(unitSystem === "imp" ? "metric" : "imp")} className="bg-orange-600/20 border border-orange-500/40 px-3 py-2 rounded-2xl text-[8px] font-black text-orange-500 flex-shrink-0 active:bg-orange-600/30 transition-colors">MODO: {unitSystem === "imp" ? "LB/FT" : "KG/CM"}</button>
@@ -221,38 +226,84 @@ function App() {
                                   <p className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">Altura</p>
                                   <p className="text-xs font-bold text-white tracking-tight">{unitSystem === "imp" ? `${selectedChar.height || 0}"` : `${inToCm(selectedChar.height || 0)} cm`}</p>
                                 </div>
+                                <div onClick={() => openEdit("Peso Corporal", "PESO SIN EQUIPO", selectedChar.physicalWeight, "physicalWeight")} className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-2xl flex-shrink-0 cursor-pointer active:bg-slate-800 transition-colors">
+                                  <p className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">Peso Pers.</p>
+                                  <p className="text-xs font-bold text-orange-400 tracking-tight">{unitSystem === "imp" ? `${selectedChar.physicalWeight || 0} lb` : `${lbToKg(selectedChar.physicalWeight || 0)} kg`}</p>
+                                </div>
                               </div>
                             </CollapsibleSection>
 
-                            <CollapsibleSection title="Combate" defaultOpen={true}>
+                            <CollapsibleSection title="Estadísticas de Combate" defaultOpen={true}>
                               <div className="grid grid-cols-3 gap-3 mb-4 text-center">
-                                <div onClick={() => openEdit("Armadura", "EQUIPO", selectedChar.armorClass?.armor, "ca_armor")} className="bg-slate-900 border border-cyan-500/20 p-3 rounded-3xl active:bg-slate-800 transition-colors"><p className="text-[8px] font-black text-cyan-400 mb-1 tracking-widest">C. ARMADURA</p><span className="text-3xl font-black text-white">{totalCA}</span></div>
-                                <div onClick={() => openEdit("BAB", "BASE", selectedChar.baseAttack, "bab")} className="bg-slate-900 border border-orange-500/20 p-3 rounded-3xl active:bg-slate-800"><p className="text-[8px] font-black text-orange-400 mb-1 tracking-widest">BAB</p><span className="text-2xl font-black text-white">+{selectedChar.baseAttack || 0}</span></div>
-                                <div onClick={() => openEdit("Iniciativa", "MISC", selectedChar.initiativeMisc, "init_misc")} className="bg-slate-900 border border-purple-500/20 p-3 rounded-3xl active:bg-slate-800"><p className="text-[8px] font-black text-purple-400 mb-1 tracking-widest">INICIATIVA</p><span className="text-2xl font-black text-white">{dexMod + (selectedChar.initiativeMisc || 0) >= 0 ? "+" : ""}{dexMod + (selectedChar.initiativeMisc || 0)}</span></div>
+                                <div onClick={() => openEdit("Armadura", "EQUIPO", selectedChar.armorClass?.armor, "ca_armor")} className="bg-slate-900 border border-cyan-500/20 p-3 rounded-3xl active:bg-slate-800 transition-colors cursor-pointer">
+                                  <p className="text-[8px] font-black text-cyan-400 mb-1 tracking-widest">C. ARMADURA</p>
+                                  <span className="text-3xl font-black text-white">{totalCA}</span>
+                                  <div className="flex items-center justify-center gap-1 mt-1 opacity-40"><span className="text-[7px] font-bold text-slate-300">10+{selectedChar.armorClass?.armor || 0}+{dexMod}</span></div>
+                                </div>
+                                <div onClick={() => openEdit("BAB", "BASE", selectedChar.baseAttack, "bab")} className="bg-slate-900 border border-orange-500/20 p-3 rounded-3xl active:bg-slate-800 cursor-pointer"><p className="text-[8px] font-black text-orange-400 mb-1 tracking-widest">BAB</p><span className="text-2xl font-black text-white">+{selectedChar.baseAttack || 0}</span></div>
+                                <div onClick={() => openEdit("Iniciativa", "MISC", selectedChar.initiativeMisc, "init_misc")} className="bg-slate-900 border border-purple-500/20 p-3 rounded-3xl active:bg-slate-800 cursor-pointer">
+                                  <p className="text-[8px] font-black text-purple-400 mb-1 tracking-widest">INICIATIVA</p>
+                                  <span className="text-2xl font-black text-white">{dexMod + (selectedChar.initiativeMisc || 0) >= 0 ? "+" : ""}{dexMod + (selectedChar.initiativeMisc || 0)}</span>
+                                  <p className="text-[7px] font-bold text-slate-500 mt-1 uppercase">DEX {dexMod} + {selectedChar.initiativeMisc || 0}</p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                {["fort", "ref", "will"].map((s) => (
+                                  <div key={s} onClick={() => openEdit(`Salvación ${s}`, s.toUpperCase(), selectedChar.saves?.[s], `save_${s}`)} className="flex-1 bg-slate-900/80 p-3 rounded-3xl border border-slate-800 text-center cursor-pointer active:bg-slate-800 transition-colors">
+                                    <span className="text-[7px] block font-black text-slate-600 mb-1">{s.toUpperCase()}</span>
+                                    <span className={`font-black text-sm ${s === "fort" ? "text-red-400" : s === "ref" ? "text-blue-400" : "text-purple-400"}`}>+{selectedChar.saves?.[s] || 0}</span>
+                                  </div>
+                                ))}
                               </div>
                               <div className="mt-6 pt-4 border-t border-slate-800">
-                                <div className="flex justify-between items-center mb-3"><h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic tracking-widest">Armas</h3><button onClick={() => setIsAttackModalOpen(true)} className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-2 py-1 rounded active:scale-95 tracking-tighter">+ AGREGAR</button></div>
-                                <div className="space-y-2">{selectedChar.attacks?.length > 0 ? selectedChar.attacks.map((atk) => <AttackCard key={atk._id} attack={atk} character={selectedChar} onDelete={(id) => askDelete("Eliminar", "¿Seguro?", () => api.delete(`/character/${selectedChar._id}/attacks/${id}`).then(() => handleUpdateCharacter({ attacks: selectedChar.attacks.filter(a => a._id !== id) })))} />) : <p className="text-center text-[10px] text-slate-600 italic py-4">Sin armas.</p>}</div>
+                                <div className="flex justify-between items-center mb-3"><h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic tracking-widest">Armas</h3><button onClick={() => setIsAttackModalOpen(true)} className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-2 py-1 rounded active:scale-95 transition-transform tracking-tighter">+ AGREGAR</button></div>
+                                <div className="space-y-2">{selectedChar.attacks?.length > 0 ? selectedChar.attacks.map((atk) => <AttackCard key={atk._id} attack={atk} character={selectedChar} onDelete={(id) => askDelete("Eliminar", "¿Seguro?", () => api.delete(`/character/${selectedChar._id}/attacks/${id}`).then(() => handleUpdateCharacter({ attacks: selectedChar.attacks.filter(a => a._id !== id) })))} />) : <p className="text-center text-[10px] text-slate-600 italic py-4">Desarmado.</p>}</div>
                               </div>
+                            </CollapsibleSection>
+
+                            <CollapsibleSection title="Atributos Base">
+                               <div className="grid grid-cols-2 gap-4 mt-4">
+                                 {Object.entries(selectedChar.stats || {}).map(([stat, val]) => (
+                                   <StatCard key={stat} label={stat} value={val} onClick={() => openEdit(`Ajustar ${stat}`, "VALOR", val, "stat", stat)} />
+                                 ))}
+                               </div>
                             </CollapsibleSection>
 
                             <CollapsibleSection title="Habilidades (Skills)">
-                              <SkillTable character={selectedChar} onUpdateSkill={(up) => handleUpdateCharacter({ skills: up })} onOpenAddModal={() => setIsSkillModalOpen(true)} />
+                              <div className="mt-2 md:max-h-[500px] md:overflow-y-auto pr-1 custom-scrollbar">
+                                <SkillTable character={selectedChar} onUpdateSkill={(up) => handleUpdateCharacter({ skills: up })} onOpenAddModal={() => setIsSkillModalOpen(true)} />
+                              </div>
                             </CollapsibleSection>
 
-                            <CollapsibleSection title="Rasgos de Raza y Clase">
-                              <div className="flex justify-between mb-2"><span className="text-[8px] font-black text-slate-500 uppercase italic">Innatas</span><button onClick={() => setIsTraitModalOpen(true)} className="text-[9px] font-black text-blue-500 active:scale-95 uppercase">+ AGREGAR</button></div>
-                              {selectedChar.traits?.map(t => <TraitCard key={t._id} trait={t} onDelete={(id) => askDelete("Olvidar", "¿Seguro?", () => handleUpdateCharacter({ traits: selectedChar.traits.filter(x => x._id !== id) }))} />)}
+                            <CollapsibleSection title="Rasgos y Dotes">
+                              <div className="space-y-4 mt-2">
+                                <div>
+                                  <div className="flex justify-between mb-2"><span className="text-[8px] font-black text-slate-500 uppercase italic">Innatas</span><button onClick={() => setIsTraitModalOpen(true)} className="text-[9px] font-black text-blue-500 active:scale-95 uppercase">+ AGREGAR</button></div>
+                                  {selectedChar.traits?.map(t => <TraitCard key={t._id} trait={t} onDelete={(id) => askDelete("Olvidar", "¿Eliminar?", () => handleUpdateCharacter({ traits: selectedChar.traits.filter(x => x._id !== id) }))} />)}
+                                </div>
+                                <div>
+                                  <div className="flex justify-between mb-2"><span className="text-[8px] font-black text-slate-500 uppercase italic">Logros</span><button onClick={() => setIsFeatModalOpen(true)} className="text-[9px] font-black text-emerald-500 active:scale-95 uppercase">+ AGREGAR</button></div>
+                                  {selectedChar.feats?.map(f => <FeatCard key={f._id} feat={f} onDelete={(id) => askDelete("Olvidar", "¿Eliminar?", () => api.delete(`/character/${selectedChar._id}/feats/${id}`).then(() => handleUpdateCharacter({ feats: selectedChar.feats.filter(x => x._id !== id) })))} />)}
+                                </div>
+                              </div>
                             </CollapsibleSection>
+                          </div>
+                          
+                          <div className="mt-8 px-2">
+                            <div className="flex justify-between items-end mb-2">
+                              <span className="text-[8px] font-black text-slate-600 tracking-widest uppercase italic tracking-widest">Carga Mochila ({unitSystem === "imp" ? `${totalWeight} lb` : `${lbToKg(totalWeight)} kg`})</span>
+                              <span onClick={() => openEdit("Máximo", "CARGA MAX", selectedChar.weight?.max, "weightMax")} className="text-[10px] font-black text-white active:text-cyan-400 cursor-pointer">MAX: {unitSystem === "imp" ? `${selectedChar.weight?.max || 100} LB` : `${lbToKg(selectedChar.weight?.max || 100)} KG`}</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-slate-900 rounded-full border border-slate-800 overflow-hidden"><div className="h-full bg-cyan-500 transition-all duration-1000 shadow-[0_0_10px_#06b6d4]" style={{ width: `${Math.min((totalWeight / (selectedChar.weight?.max || 100)) * 100, 100)}%` }} /></div>
                           </div>
                         </div>
                       )}
 
                       {activeTab === "inv" && (
                         <div className="space-y-6">
-                          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-4 shadow-2xl">
-                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 italic">🪙 Monedero</h3>
-                            <div className="grid grid-cols-4 gap-2">
+                          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-4 shadow-2xl relative overflow-hidden">
+                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 italic tracking-widest">🪙 Monedero</h3>
+                            <div className="grid grid-cols-4 gap-2 relative z-10">
                               {["cp", "sp", "gp", "pp"].map(coin => (
                                 <motion.div key={coin} whileTap={{ scale: 0.9 }} onClick={() => openEdit(coin.toUpperCase(), coin.toUpperCase(), selectedChar.money?.[coin], coin)} className="bg-slate-950 border border-slate-800 rounded-2xl p-2 flex flex-col items-center justify-center cursor-pointer active:bg-slate-900 transition-colors">
                                   <span className="text-[9px] font-black text-slate-500">{coin.toUpperCase()}</span>
@@ -264,9 +315,9 @@ function App() {
                           <div>
                             <h2 className="text-2xl font-black text-white mb-4 italic tracking-tighter">Mochila</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                              {selectedChar.inventory?.map((i) => <InventoryItem key={i._id} item={i} onDelete={(id) => askDelete("Tirar", "¿Borrar?", () => handleUpdateCharacter({ inventory: selectedChar.inventory.filter(x => x._id !== id) }))} onEdit={() => { setEditingItem(i); setIsModalOpen(true); }} />)}
+                              {selectedChar.inventory?.map((i) => <InventoryItem key={i._id} item={i} onDelete={(id) => askDelete("Tirar", "¿Borrar?", () => api.delete(`/character/${selectedChar._id}/inventory/${id}`).then(() => handleUpdateCharacter({ inventory: selectedChar.inventory.filter(x => x._id !== id) })))} onEdit={() => { setEditingItem(i); setIsModalOpen(true); }} />)}
                             </div>
-                            <button onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className="w-full mt-6 border-2 border-dashed border-slate-800 p-4 rounded-2xl text-slate-600 font-black text-[10px] active:bg-slate-900 uppercase shadow-xl">+ AGREGAR OBJETO</button>
+                            <button onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className="w-full mt-6 border-2 border-dashed border-slate-800 p-4 rounded-2xl text-slate-600 font-black text-[10px] active:bg-slate-900 uppercase shadow-xl transition-colors">+ AGREGAR OBJETO</button>
                           </div>
                         </div>
                       )}
@@ -275,11 +326,11 @@ function App() {
                         <div className="pb-10">
                           <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-black text-white italic tracking-tighter">Grimorio</h2>
-                            <button onClick={() => { setEditingSpell(null); setIsSpellModalOpen(true); }} className="bg-cyan-600 px-4 py-1.5 rounded-full text-[10px] font-black active:bg-cyan-500 shadow-lg shadow-cyan-900/30 active:scale-95">+ APRENDER</button>
+                            <button onClick={() => { setEditingSpell(null); setIsSpellModalOpen(true); }} className="bg-cyan-600 px-4 py-1.5 rounded-full text-[10px] font-black active:bg-cyan-500 shadow-lg shadow-cyan-900/30 active:scale-95 transition-all tracking-widest">+ APRENDER</button>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {selectedChar.spells?.sort((a,b) => a.level - b.level).map((s) => (
-                              <SpellCard key={s._id} spell={s} onToggle={(id) => api.patch(`/character/${selectedChar._id}/spells/${id}`).then(r => handleUpdateCharacter({ spells: selectedChar.spells.map(x => x._id === id ? r.data : x) }))} onDelete={(id) => askDelete("Olvidar", "¿Borrar?", () => handleUpdateCharacter({ spells: selectedChar.spells.filter(x => x._id !== id) }))} onEdit={() => { setEditingSpell(s); setIsSpellModalOpen(true); }} />
+                              <SpellCard key={s._id} spell={s} onToggle={(id) => api.patch(`/character/${selectedChar._id}/spells/${id}`).then(r => handleUpdateCharacter({ spells: selectedChar.spells.map(x => x._id === id ? r.data : x) }))} onDelete={(id) => askDelete("Olvidar", "¿Borrar?", () => api.delete(`/character/${selectedChar._id}/spells/${id}`).then(() => handleUpdateCharacter({ spells: selectedChar.spells.filter(x => x._id !== id) })))} onEdit={() => { setEditingSpell(s); setIsSpellModalOpen(true); }} />
                             ))}
                           </div>
                         </div>
@@ -289,10 +340,10 @@ function App() {
                         <div className="pb-10">
                           <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-black text-white italic tracking-tighter">Diario</h2>
-                            <button onClick={() => openEdit("Nota", "DIARIO", "", "note")} className="bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-full text-[10px] font-black active:bg-slate-700 transition-all shadow-lg active:scale-95 uppercase">+ ESCRIBIR</button>
+                            <button onClick={() => openEdit("Nota", "DIARIO", "", "note")} className="bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-full text-[10px] font-black active:bg-slate-700 transition-all shadow-lg active:scale-95 uppercase tracking-widest">+ ESCRIBIR</button>
                           </div>
                           <div className="columns-1 md:columns-2 gap-4">
-                            {selectedChar.notes?.map((n) => <NoteCard key={n._id} note={n} onDelete={(id) => askDelete("Quemar", "¿Borrar?", () => handleUpdateCharacter({ notes: selectedChar.notes.filter(x => x._id !== id) }))} onEdit={() => openEdit("Editar Nota", "DIARIO", n.content, "edit_note", n._id)} />)}
+                            {selectedChar.notes?.map((n) => <NoteCard key={n._id} note={n} onDelete={(id) => askDelete("Quemar", "¿Borrar?", () => api.delete(`/character/${selectedChar._id}/notes/${id}`).then(() => handleUpdateCharacter({ notes: selectedChar.notes.filter(x => x._id !== id) })))} onEdit={() => openEdit("Editar Nota", "DIARIO", n.content, "edit_note", n._id)} />)}
                           </div>
                         </div>
                       )}
