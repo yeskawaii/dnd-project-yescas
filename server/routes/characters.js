@@ -72,14 +72,20 @@ router.delete('/:charId', async (req, res) => {
 router.patch('/:charId/update', async (req, res) => {
   try {
     const updates = req.body;
+    
     const updatedChar = await Character.findByIdAndUpdate(
       req.params.charId,
       { $set: updates },
-      { new: true, runValidators: true }
+      { 
+        new: true,
+        runValidators: true,
+        context: 'query'
+      }
     ).populate('campaign', 'name');
 
     if (!updatedChar) return res.status(404).json({ error: "No se encontró el personaje" });
-    res.json(updatedChar);
+    
+    res.json(updatedChar); 
   } catch (err) {
     res.status(500).json({ error: "No se pudo actualizar el personaje" });
   }
