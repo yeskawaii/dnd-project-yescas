@@ -31,60 +31,59 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       <Toaster position="top-center" richColors theme="dark" />
 
-      {/* Contenedor con borde que cambia de color según el modo */}
-      <div className={`w-full max-w-sm p-1 rounded-2xl transition-all duration-500 bg-gradient-to-b ${isRegister ? 'from-emerald-500 to-slate-900' : 'from-orange-500 to-slate-900'}`}>
-        
-        <form onSubmit={handleSubmit} className="bg-slate-900 p-8 rounded-xl w-full shadow-2xl">
+      {/* Orbes de luz de fondo para el Login */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-500/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen"></div>
+
+      <div className="w-full max-w-sm relative z-10">
+        <form onSubmit={handleSubmit} className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
           
-          {/* ICONO Y TÍTULO DINÁMICO */}
           <div className="flex flex-col items-center mb-8">
-            <span className={`text-4xl mb-2 transition-transform duration-500 ${isRegister ? 'rotate-[360deg]' : 'rotate-0'}`}>
-              {isRegister ? '📜' : '🔑'}
+            <span className={`text-5xl mb-4 transition-transform duration-700 ${isRegister ? 'rotate-[360deg] drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'rotate-0 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]'}`}>
+              {isRegister ? '📜' : '🗝️'}
             </span>
-            <h2 className={`text-2xl font-black uppercase tracking-tighter transition-colors duration-500 ${isRegister ? 'text-emerald-500' : 'text-orange-500'}`}>
-              {isRegister ? 'Registro de Héroe' : 'Acceso a la Taberna'}
+            <h2 className={`text-2xl font-bold tracking-wider uppercase transition-colors duration-500 ${isRegister ? 'text-emerald-400' : 'text-amber-400'}`}>
+              {isRegister ? 'Registro de Héroe' : 'La Taberna'}
             </h2>
-            <p className="text-[10px] text-slate-500 font-bold tracking-[0.2em]">
-              {isRegister ? 'PASO 1: CREA TU LEYENDA' : 'PASO 0: IDENTIFÍCATE'}
+            <p className="text-[10px] text-slate-400 font-semibold tracking-[0.2em] uppercase mt-1">
+              {isRegister ? 'Paso 1: Crea tu Leyenda' : 'Paso 0: Identifícate'}
             </p>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <label className="text-[10px] font-black text-slate-400 mb-1 block ml-1">NOMBRE DE USUARIO</label>
+              <label className="text-[10px] font-bold text-slate-400 mb-1.5 block ml-1 uppercase tracking-widest">Aventurero</label>
               <input 
                 type="text" required value={form.username}
-                className="w-full bg-slate-800 p-3 rounded-lg text-white outline-none focus:ring-2 transition-all ring-offset-2 ring-offset-slate-900 focus:ring-slate-700"
+                className="w-full bg-black/20 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-amber-400/50 focus:bg-white/5 transition-all shadow-inner"
                 onChange={e => setForm({...form, username: e.target.value})}
               />
             </div>
             
             <div>
-              <label className="text-[10px] font-black text-slate-400 mb-1 block ml-1">CONTRASEÑA MÁGICA</label>
+              <label className="text-[10px] font-bold text-slate-400 mb-1.5 block ml-1 uppercase tracking-widest">Palabra Secreta</label>
               <input 
                 type="password" required value={form.password}
-                className="w-full bg-slate-800 p-3 rounded-lg text-white outline-none focus:ring-2 transition-all ring-offset-2 ring-offset-slate-900 focus:ring-slate-700"
+                className="w-full bg-black/20 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-amber-400/50 focus:bg-white/5 transition-all shadow-inner"
                 onChange={e => setForm({...form, password: e.target.value})}
               />
             </div>
           </div>
           
-          {/* BOTÓN CON COLOR DINÁMICO */}
-          <button className={`w-full mt-8 p-3 rounded-lg font-black uppercase text-xs transition-all active:scale-95 shadow-lg ${
+          <button className={`w-full mt-8 p-3.5 rounded-xl font-bold uppercase text-xs tracking-widest transition-all active:scale-95 shadow-lg border ${
             isRegister 
-              ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20' 
-              : 'bg-orange-600 hover:bg-orange-500 shadow-orange-900/20'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50' 
+              : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/50'
           }`}>
-            {isRegister ? 'Comenzar Crónica' : 'Entrar'}
+            {isRegister ? 'Comenzar Crónica' : 'Entrar al Juego'}
           </button>
 
-          {/* BOTÓN DE CAMBIO MÁS VISIBLE */}
-          <div className="mt-8 pt-6 border-t border-slate-800 text-center">
-            <p className="text-[10px] font-black text-slate-500 tracking-widest uppercase mb-2">
-              {isRegister ? '¿Ya eres de los nuestros?' : '¿Eres nuevo por aquí?'}
+          <div className="mt-8 pt-6 border-t border-white/10 text-center">
+            <p className="text-[10px] font-semibold text-slate-500 tracking-widest uppercase mb-3">
+              {isRegister ? '¿Ya eres de los nuestros?' : '¿Aún no tienes ficha?'}
             </p>
             <button 
               type="button"
@@ -92,13 +91,13 @@ const Login = () => {
                   setIsRegister(!isRegister);
                   setForm({ username: '', password: '' });
               }}
-              className={`text-xs font-black uppercase tracking-tighter py-2 px-4 rounded-full border transition-all ${
+              className={`text-xs font-bold uppercase tracking-wider py-2 px-5 rounded-full border transition-all ${
                 isRegister 
-                  ? 'border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10' 
-                  : 'border-orange-500/30 text-orange-500 hover:bg-orange-500/10'
+                  ? 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10' 
+                  : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
               }`}
             >
-              {isRegister ? 'Ir al Login' : 'Crear una Cuenta'}
+              {isRegister ? 'Ir al Login' : 'Crear Ficha'}
             </button>
           </div>
         </form>

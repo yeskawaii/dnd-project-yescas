@@ -1,7 +1,42 @@
 @import "tailwindcss";
 
+:root {
+  --font-outfit: "Outfit", sans-serif;
+}
+
 body {
   margin: 0;
-  background-color: #020617;
+  background-color: #09090b; /* zinc-950 */
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.05), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(245, 158, 11, 0.05), transparent 25%);
   -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-outfit);
+}
+
+/* Custom Webkit Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
