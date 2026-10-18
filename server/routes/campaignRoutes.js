@@ -1,25 +1,28 @@
-import express from 'express';
-import Campaign from '../models/Campaign.js';
-import Character from '../models/Character.js';
-import { protect } from '../middleware/authMiddleware.js';
+import express from "express";
+import mongoose from "mongoose";
+import Campaign from "../models/Campaign.js";
+import Character from "../models/Character.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.get('/', protect, async (req, res) => {
+router.get("/", protect, async (req, res) => {
   try {
-    const characters = await Character.find({ user: req.user._id })
-                                      .populate('campaign', 'name'); 
+    const characters = await Character.find({ user: req.user._id }).populate(
+      "campaign",
+      "name",
+    );
     res.json(characters);
   } catch (error) {
-    res.status(500).json({ message: 'Error' });
+    res.status(500).json({ message: "Error" });
   }
 });
 
 // 1. CREAR UNA CONTIENDA (Modo DM)
-router.post('/create', protect, async (req, res) => {
+router.post("/create", protect, async (req, res) => {
   try {
     const { name } = req.body;
-    
+
     // Generamos un código chido de 6 letras mayúsculas
     const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -29,87 +32,167 @@ router.post('/create', protect, async (req, res) => {
     const campaign = await Campaign.create({
       name,
       dm: dmId,
-      inviteCode
+      inviteCode,
     });
 
     res.status(201).json(campaign);
   } catch (error) {
     console.error("🚨 Error al crear contienda:", error);
-    res.status(500).json({ message: 'Error al crear la contienda' });
+    res.status(500).json({ message: "Error al crear la contienda" });
   }
 });
 
 // routes/campaignRoutes.js -> Cambia la ruta /join así:
-router.post('/join', protect, async (req, res) => {
+router.post("/join", protect, async (req, res) => {
   try {
     const { inviteCode, characterId } = req.body;
     const userId = req.user._id || req.user;
 
     const campaign = await Campaign.findOne({ inviteCode });
-    if (!campaign) return res.status(404).json({ message: 'Código inválido' });
+    if (!campaign) return res.status(404).json({ message: "Código inválido" });
 
     // LA CLAVE ESTÁ AQUÍ: Agregamos .populate() al final
     const character = await Character.findOneAndUpdate(
-      { _id: characterId, user: userId }, 
+      { _id: characterId, user: userId },
       { campaign: campaign._id },
-      { new: true }
-    ).populate('campaign', 'name'); // <--- AGREGA ESTO
+      { new: true },
+    ).populate("campaign", "name"); // <--- AGREGA ESTO
 
-    if (!character) return res.status(404).json({ message: 'No se encontró el PJ' });
+    if (!character)
+      return res.status(404).json({ message: "No se encontró el PJ" });
 
-    res.json({ message: 'Te uniste con éxito', character }); // Mandamos el character poblado
+    res.json({ message: "Te uniste con éxito", character }); // Mandamos el character poblado
   } catch (error) {
-    res.status(500).json({ message: 'Error al unirse' });
+    res.status(500).json({ message: "Error al unirse" });
   }
 });
 
 // Ruta para abandonar campaña
-router.post('/leave', protect, async (req, res) => {
+router.post("/leave", protect, async (req, res) => {
   try {
     const { characterId } = req.body;
     const userId = req.user._id || req.user;
 
     const character = await Character.findOneAndUpdate(
-      { _id: characterId, user: userId }, 
+      { _id: characterId, user: userId },
       { campaign: null },
-      { new: true }
+      { new: true },
     );
 
-    res.json({ message: 'Has abandonado la contienda', character });
+    res.json({ message: "Has abandonado la contienda", character });
   } catch (error) {
-    res.status(500).json({ message: 'Error al salir' });
+    res.status(500).json({ message: "Error al salir" });
   }
 });
 
 // 3. MIS CONTIENDAS (ESTA SIEMPRE DEBE IR ANTES DE LAS RUTAS CON :id)
-router.get('/my-campaigns', protect, async (req, res) => {
+router.get("/my-campaigns", protect, async (req, res) => {
   try {
     const dmId = req.user._id || req.user;
     const campaigns = await Campaign.find({ dm: dmId });
     res.json(campaigns);
   } catch (error) {
     console.error("🚨 Error en mis contiendas:", error);
-    res.status(500).json({ message: 'Error al obtener tus contiendas' });
+    res.status(500).json({ message: "Error al obtener tus contiendas" });
   }
 });
 
 // 4. TABLERO DEL DM (Ver a los jugadores)
-router.get('/:id/dashboard', protect, async (req, res) => {
+router.get("/:id/dashboard", protect, async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id))
+      return res.status(400).json({ message: "Contienda inválida" });
     const campaign = await Campaign.findById(req.params.id);
+    if (!campaign)
+      return res.status(404).json({ message: "Contienda no encontrada" });
     const dmId = req.user._id || req.user;
-    
+
     if (campaign.dm.toString() !== dmId.toString()) {
-      return res.status(403).json({ message: 'No eres el Dungeon Master de esta contienda' });
+      return res
+        .status(403)
+        .json({ message: "No eres el Dungeon Master de esta contienda" });
     }
 
-    const players = await Character.find({ campaign: campaign._id })
-      .select('name class level hp armorClass initiativeMisc baseAttack saves stats');
+    const players = await Character.find({ campaign: campaign._id }).select(
+      "name class race level hp armorClass initiativeMisc baseAttack saves stats speed attacks spells feats skills traits",
+    );
 
     res.json({ campaign, players });
   } catch (error) {
     console.error("🚨 Error al cargar tablero:", error);
-    res.status(500).json({ message: 'Error al cargar el tablero' });
+    res.status(500).json({ message: "Error al cargar el tablero" });
+  }
+});
+
+// Solo el DM puede leer (dashboard) y guardar su mesa, incluyendo los secretos.
+router.put("/:id/workspace", protect, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id))
+      return res.status(400).json({ message: "Contienda inválida" });
+    const dm = req.user._id || req.user;
+    const campaign = await Campaign.findById(req.params.id);
+    if (!campaign)
+      return res.status(404).json({ message: "Contienda no encontrada" });
+    if (String(campaign.dm) !== String(dm))
+      return res
+        .status(403)
+        .json({ message: "Solo el DM puede guardar esta mesa" });
+    const { workspace, revision } = req.body ?? {};
+    if (
+      !workspace ||
+      typeof workspace !== "object" ||
+      Array.isArray(workspace) ||
+      !Number.isInteger(revision) ||
+      revision < 0
+    ) {
+      return res.status(400).json({ message: "Mesa o versión inválida" });
+    }
+    // Construir un documento independiente valida listas, campos y referencias antes de escribir.
+    const candidate = new Campaign({
+      name: campaign.name,
+      dm,
+      inviteCode: campaign.inviteCode,
+      dmWorkspace: workspace,
+    });
+    await candidate.validate();
+    const filter = { _id: campaign._id, dm };
+    if (revision === 0)
+      filter.$or = [
+        { workspaceRevision: 0 },
+        { workspaceRevision: { $exists: false } },
+      ];
+    else filter.workspaceRevision = revision;
+    const saved = await Campaign.findOneAndUpdate(
+      filter,
+      {
+        $set: { dmWorkspace: candidate.dmWorkspace.toObject() },
+        $inc: { workspaceRevision: 1 },
+      },
+      { new: true },
+    );
+    if (!saved)
+      return res
+        .status(409)
+        .json({
+          message:
+            "La mesa cambió en otra pestaña. Copia tus notas pendientes y vuelve a abrir la contienda para cargar la última versión.",
+        });
+    res.json({
+      workspace: saved.dmWorkspace,
+      revision: saved.workspaceRevision,
+    });
+  } catch (error) {
+    if (
+      ["ValidationError", "StrictModeError", "CastError"].includes(error.name)
+    ) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Revisa los datos de la mesa: hay valores inválidos o demasiado largos.",
+        });
+    }
+    res.status(500).json({ message: "No se pudo guardar la mesa" });
   }
 });
 
