@@ -1,96 +1,155 @@
 import { useState } from "react";
 import SkillTable from "../SkillTable";
-import TraitCard from "../TraitCard";
-import FeatCard from "../FeatCard";
-import AddSkillModal from "../AddSkillModal";
-import AddTraitModal from "../AddTraitModal";
-import AddFeatModal from "../AddFeatModal";
-import api from "../../api/axios";
+import Icon from "../ui/Icon";
+import BottomSheet from "../ui/BottomSheet";
+import DeleteSheet from "../ui/DeleteSheet";
+import ResourceEditor from "./ResourceEditor";
 
-export default function FeaturesTab({ character, onUpdate }) {
-  const [isSkillModalOpen, setIsSkillModalOpen] = useState(false);
-  const [isTraitModalOpen, setIsTraitModalOpen] = useState(false);
-  const [isFeatModalOpen, setIsFeatModalOpen] = useState(false);
+const collections = { skill: "skills", trait: "traits", feat: "feats" };
 
+export default function FeaturesTab({
+  character,
+  onUpdate,
+  onToggleFavorite,
+  saving,
+}) {
+  const [editor, setEditor] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const save = (data) => {
+    const collection = collections[editor.kind];
+    return onUpdate({
+      [collection]: editor.item
+        ? character[collection].map((item) =>
+            item._id === data._id ? data : item,
+          )
+        : [...(character[collection] || []), data],
+    });
+  };
   return (
-    <div className="space-y-6 pb-10">
-      <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-violet-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-        <div className="flex justify-between items-center mb-6 relative z-10">
-          <h2 className="text-xl font-bold text-white tracking-wider uppercase">Habilidades (Skills)</h2>
+    <div className="legacy-content">
+      <section className="surface">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Lo que sabes hacer</p>
+            <h2>Habilidades</h2>
+          </div>
+          <Icon name="skill" />
         </div>
-        <div className="md:max-h-[500px] overflow-y-auto custom-scrollbar relative z-10">
-          <SkillTable 
-            character={character} 
-            onUpdateSkill={(up) => onUpdate({ skills: up })} 
-            onOpenAddModal={() => setIsSkillModalOpen(true)} 
-          />
-        </div>
+        <SkillTable
+          character={character}
+          onUpdateSkill={(skills) => onUpdate({ skills })}
+          onOpenAddModal={() => setEditor({ kind: "skill", item: null })}
+          onToggleFavorite={onToggleFavorite}
+          saving={saving}
+        />
+      </section>
+      <div className="legacy-features-grid">
+        {[
+          ["trait", "Rasgos innatos", "book"],
+          ["feat", "Dotes", "star"],
+        ].map(([kind, title, icon]) => (
+          <section className="surface" key={kind}>
+            <div className="section-heading">
+              <h2>{title}</h2>
+              <button
+                className="text-button"
+                disabled={saving}
+                onClick={() => setEditor({ kind, item: null })}
+              >
+                <Icon name="plus" size={16} />
+                Agregar
+              </button>
+            </div>
+            <div className="feature-list">
+              {(character[collections[kind]] || []).map((item) => (
+                <button
+                  className="feature-row"
+                  key={item._id}
+                  onClick={() => setSelected({ kind, item })}
+                >
+                  <span
+                    className={`action-emblem ${kind === "trait" ? "tone-mint" : "tone-amber"}`}
+                  >
+                    <Icon name={icon} />
+                  </span>
+                  <span className="action-copy">
+                    <strong>{item.name}</strong>
+                    <small>
+                      {kind === "trait"
+                        ? item.source || "Rasgo de personaje"
+                        : item.type}
+                    </small>
+                  </span>
+                  <Icon name="chevron" size={17} />
+                </button>
+              ))}
+            </div>
+            {!character[collections[kind]]?.length && (
+              <p className="helper-text">
+                Aquí aparecerán tus {kind === "trait" ? "rasgos" : "dotes"} y
+                sus efectos.
+              </p>
+            )}
+          </section>
+        ))}
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl -ml-10 -mt-10 pointer-events-none"></div>
-          <div className="flex justify-between items-center mb-6 relative z-10">
-            <h2 className="text-lg font-bold text-white tracking-wider uppercase">Rasgos Innatos</h2>
-            <button 
-              onClick={() => setIsTraitModalOpen(true)} 
-              className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-400/10 px-4 py-2 rounded-full hover:bg-amber-400/20 transition-colors"
+      {selected && (
+        <BottomSheet
+          title={selected.item.name}
+          subtitle={selected.kind === "trait" ? "Rasgo de personaje" : "Dote"}
+          onClose={() => setSelected(null)}
+        >
+          <p className="detail-description">
+            {selected.item.description ||
+              selected.item.desc ||
+              "Todavía no hay una descripción."}
+          </p>
+          <div className="detail-footer">
+            <button
+              className="button secondary"
+              onClick={() => {
+                setEditor(selected);
+                setSelected(null);
+              }}
             >
-              + AGREGAR
+              <Icon name="edit" />
+              Editar
+            </button>
+            <button
+              className="button danger"
+              onClick={() => {
+                setDeleting(selected);
+                setSelected(null);
+              }}
+            >
+              <Icon name="trash" />
+              Eliminar
             </button>
           </div>
-          <div className="space-y-3 relative z-10">
-            {character.traits?.length === 0 && <p className="text-sm text-slate-400 italic">No hay rasgos registrados.</p>}
-            {character.traits?.map(t => (
-              <TraitCard 
-                key={t._id} 
-                trait={t} 
-                onDelete={(id) => onUpdate({ traits: character.traits.filter(x => x._id !== id) })} 
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-          <div className="flex justify-between items-center mb-6 relative z-10">
-            <h2 className="text-lg font-bold text-white tracking-wider uppercase">Dotes (Feats)</h2>
-            <button 
-              onClick={() => setIsFeatModalOpen(true)} 
-              className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-emerald-400/10 px-4 py-2 rounded-full hover:bg-emerald-400/20 transition-colors"
-            >
-              + AGREGAR
-            </button>
-          </div>
-          <div className="space-y-3 relative z-10">
-            {character.feats?.length === 0 && <p className="text-sm text-slate-400 italic">No hay dotes registradas.</p>}
-            {character.feats?.map(f => (
-              <FeatCard 
-                key={f._id} 
-                feat={f} 
-                onDelete={(id) => api.delete(`/character/${character._id}/feats/${id}`).then(() => onUpdate({ feats: character.feats.filter(x => x._id !== id) }))} 
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <AddSkillModal 
-        isOpen={isSkillModalOpen} 
-        onClose={() => setIsSkillModalOpen(false)} 
-        onAdd={(newSkill) => onUpdate({ skills: [...(character.skills || []), newSkill] })} 
-      />
-      <AddTraitModal 
-        isOpen={isTraitModalOpen} 
-        onClose={() => setIsTraitModalOpen(false)} 
-        onAdd={(newTrait) => onUpdate({ traits: [...(character.traits || []), newTrait] })} 
-      />
-      <AddFeatModal 
-        isOpen={isFeatModalOpen} 
-        onClose={() => setIsFeatModalOpen(false)} 
-        onAdd={(f) => api.post(`/character/${character._id}/feats`, f).then((r) => onUpdate({ feats: [...(character.feats || []), r.data] }))} 
-      />
+        </BottomSheet>
+      )}
+      {editor && (
+        <ResourceEditor
+          kind={editor.kind}
+          item={editor.item}
+          onClose={() => setEditor(null)}
+          onSave={save}
+        />
+      )}
+      {deleting && (
+        <DeleteSheet
+          name={deleting.item.name}
+          onClose={() => setDeleting(null)}
+          onConfirm={() =>
+            onUpdate({
+              [collections[deleting.kind]]: character[
+                collections[deleting.kind]
+              ].filter((item) => item._id !== deleting.item._id),
+            })
+          }
+        />
+      )}
     </div>
   );
 }

@@ -1,107 +1,191 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useLayoutEffect, useRef, useState } from "react";
+import { motion as Motion } from "framer-motion";
 import { toast } from "sonner";
 import api from "../api/axios";
-
-// Components
 import SheetHeader from "../components/character-sheet/SheetHeader";
+import GameTab from "../components/character-sheet/GameTab";
 import StatsTab from "../components/character-sheet/StatsTab";
 import FeaturesTab from "../components/character-sheet/FeaturesTab";
 import InventoryTab from "../components/character-sheet/InventoryTab";
 import SpellsTab from "../components/character-sheet/SpellsTab";
 import NotesTab from "../components/character-sheet/NotesTab";
+import Icon from "../components/ui/Icon";
+import { actionKey } from "../utils/quickActions";
 
-export default function CharacterSheet({ character, setCharacters, setSelectedChar, setMode, logout }) {
-  const [activeTab, setActiveTab] = useState("stats");
+const tabs = [
+  { id: "game", icon: "sword", label: "Partida" },
+  { id: "character", icon: "book", label: "Personaje" },
+  { id: "inventory", icon: "bag", label: "Mochila" },
+  { id: "journal", icon: "note", label: "Diario" },
+];
+const sections = [
+  { id: "stats", label: "Ficha" },
+  { id: "features", label: "Habilidades y rasgos" },
+  { id: "spells", label: "Hechizos" },
+];
+
+export default function CharacterSheet({
+  character,
+  setCharacters,
+  setSelectedChar,
+  logout,
+}) {
+  const [activeTab, setActiveTab] = useState("game");
+  const [section, setSection] = useState("stats");
   const [unitSystem, setUnitSystem] = useState("imp");
+  const [saveState, setSaveState] = useState("saved");
+  const queue = useRef(Promise.resolve());
+  const pending = useRef(0);
+  const scrollPositions = useRef({});
+  const saving = saveState === "saving";
 
-  const handleUpdateCharacter = (updatedData) => {
-    api.patch(`/character/${character._id}/update`, updatedData)
-      .then((res) => {
-        setSelectedChar(res.data);
-        setCharacters(prev => prev.map(c => c._id === res.data._id ? res.data : c));
-        toast.success("Actualizado");
-      })
-      .catch(() => toast.error("Error actualizando DB"));
+  useLayoutEffect(() => {
+    window.scrollTo({
+      top: scrollPositions.current[`${activeTab}:${section}`] || 0,
+      behavior: "instant",
+    });
+  }, [activeTab, section]);
+
+  const navigate = (tab, nextSection = section) => {
+    scrollPositions.current[`${activeTab}:${section}`] = window.scrollY;
+    setSection(nextSection);
+    setActiveTab(tab);
   };
 
-  const tabs = [
-    { id: "stats", icon: "⚔️", label: "Stats" },
-    { id: "features", icon: "🧬", label: "Rasgos" },
-    { id: "inv", icon: "🎒", label: "Mochila" },
-    { id: "spells", icon: "🪄", label: "Spells" },
-    { id: "notes", icon: "📜", label: "Notas" }
-  ];
+  const handleUpdateCharacter = (updatedData) => {
+    pending.current += 1;
+    setSaveState("saving");
+    const request = queue.current.then(async () => {
+      try {
+        const { data } = await api.patch(
+          `/character/${character._id}/update`,
+          updatedData,
+        );
+        setSelectedChar(data);
+        setCharacters((previous) =>
+          previous.map((item) => (item._id === data._id ? data : item)),
+        );
+        return data;
+      } catch {
+        toast.error(
+          "No se guardó el cambio. Comprueba tu conexión e inténtalo de nuevo.",
+        );
+        return null;
+      } finally {
+        pending.current -= 1;
+      }
+    });
+    queue.current = request;
+    request.then((result) => {
+      if (!pending.current) setSaveState(result ? "saved" : "error");
+    });
+    return request;
+  };
+
+  const toggleFavorite = (action) => {
+    if (saving) return Promise.resolve(null);
+    const current = character.quickActions || [];
+    const exists = current.some((entry) => actionKey(entry) === action.key);
+    return handleUpdateCharacter({
+      quickActions: exists
+        ? current.filter((entry) => actionKey(entry) !== action.key)
+        : [...current, { kind: action.kind, itemId: action.itemId }],
+    });
+  };
+  const browse = (destination) => navigate("character", destination);
+  const shared = {
+    character,
+    onUpdate: handleUpdateCharacter,
+    onToggleFavorite: toggleFavorite,
+    saving,
+  };
 
   return (
-    <div className="flex flex-col min-h-screen pb-24 text-slate-100 font-sans relative overflow-x-hidden">
-      <SheetHeader 
-        character={character} 
-        onUpdate={handleUpdateCharacter} 
-        onBack={() => setSelectedChar(null)} 
-        logout={logout} 
+    <div className="character-app">
+      <SheetHeader
+        character={character}
+        onUpdate={handleUpdateCharacter}
+        onBack={() => setSelectedChar(null)}
+        logout={logout}
+        saveState={saveState}
       />
-
-      <div className="max-w-5xl mx-auto w-full px-4 mt-6">
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex justify-center gap-2 mb-8 bg-slate-900/50 p-2 rounded-2xl border border-slate-800 w-max mx-auto shadow-lg backdrop-blur-sm">
-          {tabs.map((tab) => (
-            <button 
-              key={tab.id} 
-              onClick={() => setActiveTab(tab.id)} 
-              className={`relative flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs ${activeTab === tab.id ? "text-cyan-400 bg-cyan-500/10" : "text-slate-500 hover:text-slate-400 active:text-slate-300 active:bg-slate-800/50"}`}
-            >
-              <span className="text-lg z-10">{tab.icon}</span>
-              <span className="z-10">{tab.label}</span>
-              {activeTab === tab.id && (
-                <motion.div layoutId="desktop-glow" className="absolute inset-0 border border-cyan-500/30 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.15)]" />
-              )}
-            </button>
-          ))}
-        </nav>
-
+      <div className="sheet-workspace">
+        <div className="page-intro">
+          <div>
+            <p className="eyebrow">
+              {activeTab === "game"
+                ? "Tu aventura, sin interrupciones"
+                : "Un lugar para cada detalle"}
+            </p>
+            <h1>
+              {tabs.find((tab) => tab.id === activeTab).label === "Partida"
+                ? "Tu mesa de aventura"
+                : tabs.find((tab) => tab.id === activeTab).label}
+            </h1>
+          </div>
+          <span className="edition-pill">
+            <Icon name="dice" size={15} />
+            D&D 3.5
+          </span>
+        </div>
+        {activeTab === "character" && (
+          <nav
+            className="segmented character-sections"
+            aria-label="Secciones del personaje"
+          >
+            {sections.map((item) => (
+              <button
+                key={item.id}
+                className={section === item.id ? "active" : ""}
+                aria-current={section === item.id ? "page" : undefined}
+                onClick={() => navigate("character", item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+        )}
         <main>
-          <AnimatePresence mode="wait">
-            <motion.div 
-              key={activeTab} 
-              initial={{ opacity: 0, y: 10 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -10 }} 
-              transition={{ duration: 0.2 }}
-            >
-              {activeTab === "stats" && (
-                <StatsTab character={character} onUpdate={handleUpdateCharacter} unitSystem={unitSystem} setUnitSystem={setUnitSystem} />
-              )}
-              {activeTab === "features" && (
-                <FeaturesTab character={character} onUpdate={handleUpdateCharacter} />
-              )}
-              {activeTab === "inv" && (
-                <InventoryTab character={character} onUpdate={handleUpdateCharacter} unitSystem={unitSystem} />
-              )}
-              {activeTab === "spells" && (
-                <SpellsTab character={character} onUpdate={handleUpdateCharacter} />
-              )}
-              {activeTab === "notes" && (
-                <NotesTab character={character} onUpdate={handleUpdateCharacter} />
-              )}
-            </motion.div>
-          </AnimatePresence>
+          <Motion.div
+            key={`${activeTab}:${activeTab === "character" ? section : ""}`}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.12 }}
+          >
+            {activeTab === "game" && <GameTab {...shared} onBrowse={browse} />}
+            {activeTab === "character" && section === "stats" && (
+              <StatsTab
+                {...shared}
+                unitSystem={unitSystem}
+                setUnitSystem={setUnitSystem}
+              />
+            )}
+            {activeTab === "character" && section === "features" && (
+              <FeaturesTab {...shared} />
+            )}
+            {activeTab === "character" && section === "spells" && (
+              <SpellsTab {...shared} />
+            )}
+            {activeTab === "inventory" && (
+              <InventoryTab {...shared} unitSystem={unitSystem} />
+            )}
+            {activeTab === "journal" && <NotesTab {...shared} />}
+          </Motion.div>
         </main>
       </div>
-
-      {/* Mobile Nav */}
-      <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-sm bg-slate-900/95 backdrop-blur-md border border-white/10 px-4 py-3 flex justify-between items-center z-40 rounded-3xl shadow-2xl">
+      <nav className="main-nav" aria-label="Navegación principal">
         {tabs.map((tab) => (
-          <button 
-            key={tab.id} 
-            onClick={() => setActiveTab(tab.id)} 
-            className={`relative flex flex-col items-center transition-all ${activeTab === tab.id ? "text-cyan-400 scale-110" : "text-slate-500"}`}
+          <button
+            key={tab.id}
+            className={activeTab === tab.id ? "active" : ""}
+            aria-current={activeTab === tab.id ? "page" : undefined}
+            onClick={() => navigate(tab.id)}
           >
-            {activeTab === tab.id && (
-              <motion.div layoutId="mobile-glow" className="absolute -top-1 w-10 h-10 bg-cyan-500/20 blur-xl rounded-full" />
-            )}
-            <span className="text-xl z-10">{tab.icon}</span>
-            <span className="text-[8px] font-black uppercase mt-1 tracking-widest">{tab.label}</span>
+            <span className="nav-icon">
+              <Icon name={tab.icon} size={22} />
+            </span>
+            <span>{tab.label}</span>
+            {activeTab === tab.id && <span className="nav-active-dot" />}
           </button>
         ))}
       </nav>

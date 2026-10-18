@@ -1,116 +1,164 @@
-import { motion } from "framer-motion";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import api from "../api/axios";
 import { toast } from "sonner";
-import AddCharacterModal from "../components/AddCharacterModal";
 import JoinCampaignModal from "../components/JoinCampaignModal";
+import Icon from "../components/ui/Icon";
 
-export default function CharacterSelect({ 
-  characters, 
-  setCharacters, 
-  setSelectedChar, 
-  setMode, 
-  askDelete 
+export default function CharacterSelect({
+  characters,
+  setCharacters,
+  setSelectedChar,
+  setMode,
+  askDelete,
 }) {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
-  const [isCharModalOpen, setIsCharModalOpen] = useState(false);
-
-  const handleJoinCampaign = (inviteCode, characterId) => {
-    api.post("/campaign/join", { inviteCode, characterId })
-      .then((res) => {
-        toast.success(res.data.message);
-        setCharacters(characters.map(c => c._id === characterId ? res.data.character : c));
-      })
-      .catch((err) => toast.error(err.response?.data?.message || "Error al unirse"));
+  const [isCreating, setIsCreating] = useState(false);
+  const creationPending = useRef(false);
+  const create = async () => {
+    if (creationPending.current) return;
+    creationPending.current = true;
+    setIsCreating(true);
+    try {
+      const { data } = await api.post("/character", {});
+      setCharacters((previous) => [...previous, data]);
+      setSelectedChar(data);
+      toast.success("Ficha lista. Personalízala en la pestaña Personaje.");
+    } catch {
+      toast.error("No se pudo crear el personaje. Inténtalo de nuevo.");
+    } finally {
+      creationPending.current = false;
+      setIsCreating(false);
+    }
   };
-
-  const handleDelete = (id) => {
-    askDelete("Borrar", "¿Eliminar héroe?", () => 
-      api.delete(`/character/${id}`)
-        .then(() => setCharacters(characters.filter(char => char._id !== id)))
+  const join = async (inviteCode, characterId) => {
+    try {
+      const { data } = await api.post("/campaign/join", {
+        inviteCode,
+        characterId,
+      });
+      setCharacters((previous) =>
+        previous.map((character) =>
+          character._id === characterId ? data.character : character,
+        ),
+      );
+      toast.success(data.message);
+      return true;
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "No se pudo unir a la contienda",
+      );
+      return false;
+    }
+  };
+  const remove = (id) =>
+    askDelete(
+      "Eliminar personaje",
+      "Se eliminará este personaje y todos sus recursos. Esta acción no se puede deshacer.",
+      async () => {
+        try {
+          await api.delete(`/character/${id}`);
+          setCharacters((previous) =>
+            previous.filter((character) => character._id !== id),
+          );
+        } catch {
+          toast.error("No se pudo eliminar el personaje.");
+        }
+      },
     );
-  };
-
   return (
-    <div className="min-h-screen p-8 flex flex-col items-center justify-center relative overflow-hidden">
-      {/* Background glowing orbs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-[100px] pointer-events-none"></div>
-
-      <button onClick={() => setMode("lobby")} className="absolute top-8 left-8 text-slate-400 hover:text-white text-[10px] tracking-widest uppercase transition-colors z-10">
-        ← VOLVER AL LOBBY
-      </button>
-      
-      <h1 className="text-amber-500 font-bold text-4xl mb-12 tracking-wider z-10 drop-shadow-[0_0_15px_rgba(245,158,11,0.3)]">Selecciona tu Héroe</h1>
-      
-      <div className="grid gap-4 w-full max-w-md z-10">
-        {characters.map((c) => (
-          <motion.div 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }} 
-            key={c._id} 
-            className="rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 p-5 flex items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.5)] group cursor-pointer"
-            onClick={() => setSelectedChar(c)}
-          >
-            <div className="flex-1 text-left truncate">
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-10 h-10 bg-black/30 border border-white/5 rounded-full flex items-center justify-center text-lg shadow-inner">
-                  {c.class === "Hechicero" ? "🪄" : "⚔️"}
-                </div>
-                <div>
-                  <h2 className="text-white font-bold text-xl truncate leading-none group-hover:text-amber-400 transition-colors">{c.name}</h2>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-slate-400 text-[11px] font-semibold tracking-widest uppercase">{c.class} • LVL {c.level}</p>
-                    {c.campaign && (
-                      <span className="bg-amber-500/20 text-amber-400 text-[9px] px-2 py-0.5 font-bold border border-amber-500/30 rounded-full uppercase">
-                        🗡️ {c.campaign.name}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <button 
-              onClick={(e) => { e.stopPropagation(); handleDelete(c._id); }} 
-              className="w-10 h-10 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all opacity-50 group-hover:opacity-100"
-              title="Eliminar Héroe"
-            >
-              🗑️
-            </button>
-          </motion.div>
-        ))}
-
-        <div className="mt-8 flex gap-4 w-full">
-          <button 
-            onClick={() => setIsJoinModalOpen(true)} 
-            className="flex-1 bg-white/5 border border-white/10 p-4 rounded-2xl text-violet-400 font-bold text-xs uppercase shadow-sm tracking-widest hover:text-white hover:border-violet-400/50 hover:bg-violet-500/20 transition-all text-center"
-          >
-            🔗 UNIRSE A CONTIENDA
-          </button>
-
-          <button 
-            onClick={() => setIsCharModalOpen(true)} 
-            className="flex-1 bg-amber-500/10 border border-amber-500/30 p-4 rounded-2xl text-amber-400 font-bold text-xs uppercase shadow-sm tracking-widest hover:text-white hover:border-amber-400 hover:bg-amber-500/40 transition-all text-center drop-shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-          >
-            + CREAR NUEVO
-          </button>
+    <div className="entry-page">
+      <header className="entry-topbar">
+        <button className="text-button" onClick={() => setMode("lobby")}>
+          <Icon name="back" size={18} />
+          Volver
+        </button>
+        <div className="wordmark">
+          <Icon name="dice" size={20} />
+          Grimorio
         </div>
+      </header>
+      <div className="entry-heading">
+        <p className="eyebrow">Tus compañeros de aventura</p>
+        <h1>
+          ¿Quién serás <em>hoy?</em>
+        </h1>
+        <p>
+          Elige un personaje y vuelve a la acción. Tu mesa estará justo como la
+          dejaste.
+        </p>
       </div>
-
-      <JoinCampaignModal 
-        isOpen={isJoinModalOpen} 
-        onClose={() => setIsJoinModalOpen(false)} 
-        onJoin={handleJoinCampaign} 
-        characters={characters} 
-      />
-      <AddCharacterModal 
-        isOpen={isCharModalOpen} 
-        onClose={() => setIsCharModalOpen(false)} 
-        onAdd={(d) => api.post("/character", d).then((r) => { 
-          setCharacters([...characters, r.data]); 
-          setSelectedChar(r.data); 
-        })} 
-      />
+      <div className="character-select-list">
+        {characters.map((character) => (
+          <article className="character-select-card" key={character._id}>
+            <button
+              className="character-select-open"
+              onClick={() => setSelectedChar(character)}
+            >
+              <span className="character-avatar">
+                <Icon name="sword" size={24} />
+              </span>
+              <div>
+                <h2>{character.name}</h2>
+                <p>
+                  {character.class} · Nivel {character.level}
+                </p>
+                {character.campaign?.name && (
+                  <small>{character.campaign.name}</small>
+                )}
+              </div>
+              <Icon name="chevron" />
+            </button>
+            <button
+              className="icon-button"
+              onClick={() => remove(character._id)}
+              aria-label={`Eliminar ${character.name}`}
+            >
+              <Icon name="trash" size={18} />
+            </button>
+          </article>
+        ))}
+      </div>
+      {!characters.length && (
+        <div className="favorites-empty">
+          <span className="empty-illustration">
+            <Icon name="sword" size={30} />
+          </span>
+          <h3>Tu primera historia te espera.</h3>
+          <p>
+            Crea una ficha y personaliza tu nombre, clase, atributos y equipo.
+          </p>
+        </div>
+      )}
+      <div className="selection-actions">
+        <button
+          className="button primary"
+          onClick={create}
+          disabled={isCreating}
+          aria-busy={isCreating}
+        >
+          <Icon name="plus" size={18} />
+          {isCreating ? "Abriendo ficha…" : "Crear nuevo personaje"}
+        </button>
+        <button
+          className="button secondary"
+          onClick={() => setIsJoinModalOpen(true)}
+          disabled={!characters.length}
+        >
+          <Icon name="link" size={18} />
+          Unirse a contienda
+        </button>
+      </div>
+      <p className="selection-hint">
+        Una ficha lista para editar. Una mesa lista para jugar.
+      </p>
+      {isJoinModalOpen && (
+        <JoinCampaignModal
+          isOpen
+          onClose={() => setIsJoinModalOpen(false)}
+          onJoin={join}
+          characters={characters}
+        />
+      )}
     </div>
   );
 }

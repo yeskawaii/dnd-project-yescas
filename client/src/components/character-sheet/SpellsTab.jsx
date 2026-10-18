@@ -1,65 +1,199 @@
 import { useState } from "react";
-import SpellCard from "../SpellCard";
-import AddSpellModal from "../AddSpellModal";
-import api from "../../api/axios";
+import Icon from "../ui/Icon";
+import FavoriteButton from "../ui/FavoriteButton";
+import DeleteSheet from "../ui/DeleteSheet";
+import ResourceEditor from "./ResourceEditor";
+import ActionDetails from "./ActionDetails";
+import { actionKey, getActions } from "../../utils/quickActions";
 
-export default function SpellsTab({ character, onUpdate }) {
-  const [isSpellModalOpen, setIsSpellModalOpen] = useState(false);
-  const [editingSpell, setEditingSpell] = useState(null);
-
-  const handleDeleteSpell = (id) => {
-    onUpdate({ spells: character.spells.filter(x => x._id !== id) });
-  };
-
-  const handleToggleSpell = (id) => {
-    api.patch(`/character/${character._id}/spells/${id}`).then(r => {
-      onUpdate({ spells: character.spells.map(x => x._id === id ? r.data : x) });
+export default function SpellsTab({
+  character,
+  onUpdate,
+  onToggleFavorite,
+  saving,
+}) {
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [selected, setSelected] = useState(null);
+  const [editor, setEditor] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const favorites = (character.quickActions || []).map(actionKey);
+  const actions = getActions(character)
+    .filter((action) => action.kind === "spell")
+    .sort((a, b) => a.item.level - b.item.level);
+  const visible = actions.filter(
+    (action) =>
+      action.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()) &&
+      (filter === "all" ||
+        (filter === "prepared"
+          ? action.item.prepared
+          : favorites.includes(action.key))),
+  );
+  const selectedAction = actions.find((action) => action.key === selected);
+  const save = (data) =>
+    onUpdate({
+      spells: editor.item
+        ? character.spells.map((spell) =>
+            spell._id === data._id ? data : spell,
+          )
+        : [...(character.spells || []), data],
     });
-  };
-
-  const openAddSpell = () => {
-    setEditingSpell(null);
-    setIsSpellModalOpen(true);
-  };
-
-  const openEditSpell = (spell) => {
-    setEditingSpell(spell);
-    setIsSpellModalOpen(true);
-  };
-
   return (
-    <div className="pb-10">
-      <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
-        <div className="flex justify-between items-center mb-6 relative z-10">
-          <h2 className="text-xl font-bold text-white tracking-wider uppercase">Grimorio Mágico</h2>
-          <button 
-            onClick={openAddSpell} 
-            className="bg-violet-600/20 border border-violet-500/30 px-4 py-2 rounded-full text-[10px] font-bold text-violet-300 hover:bg-violet-600/40 hover:text-white transition-colors tracking-widest uppercase shadow-[0_0_15px_rgba(139,92,246,0.2)]"
-          >
-            + APRENDER
-          </button>
+    <section className="collection-page">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Un poco de magia</p>
+          <h2>
+            Tu grimorio <span className="count-badge">{actions.length}</span>
+          </h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
-          {character.spells?.sort((a,b) => a.level - b.level).map((s) => (
-            <SpellCard 
-              key={s._id} 
-              spell={s} 
-              onToggle={() => handleToggleSpell(s._id)} 
-              onDelete={() => handleDeleteSpell(s._id)} 
-              onEdit={() => openEditSpell(s)} 
-            />
-          ))}
-        </div>
+        <button
+          className="button primary compact"
+          onClick={() => setEditor({ item: null })}
+          disabled={saving}
+        >
+          <Icon name="plus" size={17} />
+          Aprender
+        </button>
       </div>
-
-      <AddSpellModal 
-        isOpen={isSpellModalOpen} 
-        onClose={() => { setIsSpellModalOpen(false); setEditingSpell(null); }} 
-        onAdd={(s) => api.post(`/character/${character._id}/spells`, s).then((r) => onUpdate({ spells: [...character.spells, r.data] }))} 
-        onEdit={(id, data) => api.patch(`/character/${character._id}/spells/${id}`, data).then((r) => onUpdate({ spells: character.spells.map((s) => (s._id === id ? r.data : s)) }))} 
-        spellToEdit={editingSpell} 
-      />
-    </div>
+      <label className="search-field">
+        <Icon name="search" />
+        <input
+          aria-label="Buscar hechizos"
+          placeholder="Busca un hechizo…"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </label>
+      <div className="filter-chips">
+        {[
+          ["all", "Todos"],
+          ["prepared", "Preparados"],
+          ["favorites", "Favoritos"],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            className={filter === id ? "active" : ""}
+            onClick={() => setFilter(id)}
+          >
+            {label}
+            {id === "prepared" && (
+              <span>
+                {actions.filter((action) => action.item.prepared).length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      <div className="collection-grid">
+        {visible.map((action) => (
+          <article className="collection-card" key={action.key}>
+            <button
+              className="collection-open"
+              onClick={() => setSelected(action.key)}
+            >
+              <span className="action-emblem tone-violet">
+                <Icon name="magic" size={24} />
+              </span>
+              <span className="action-copy">
+                <span className="action-type">
+                  Nivel {action.item.level} · {action.item.school}
+                </span>
+                <strong>{action.name}</strong>
+                <small>{action.item.desc || "Toca para ver sus efectos"}</small>
+              </span>
+              <Icon name="chevron" size={17} />
+            </button>
+            <div className="collection-card-footer">
+              <button
+                className={`preparation-button ${action.item.prepared ? "prepared" : ""}`}
+                role="switch"
+                aria-checked={action.item.prepared}
+                aria-label={`Preparar ${action.name}`}
+                disabled={saving}
+                onClick={() =>
+                  onUpdate({
+                    spells: character.spells.map((spell) =>
+                      spell._id === action.itemId
+                        ? { ...spell, prepared: !spell.prepared }
+                        : spell,
+                    ),
+                  })
+                }
+              >
+                <span className="switch-track">
+                  <span />
+                </span>
+                {action.item.prepared ? "Preparado" : "Sin preparar"}
+              </button>
+              <FavoriteButton
+                active={favorites.includes(action.key)}
+                name={action.name}
+                disabled={saving}
+                onClick={() => onToggleFavorite(action)}
+              />
+            </div>
+          </article>
+        ))}
+      </div>
+      {!visible.length && (
+        <div className="empty-state">
+          <Icon name="magic" size={32} />
+          <h3>
+            {actions.length
+              ? "Sin hechizos en esta vista"
+              : "Tu magia empieza aquí"}
+          </h3>
+          <p>
+            {actions.length
+              ? "Prueba otro filtro o nombre."
+              : "Agrega un hechizo y marca tus favoritos para tenerlos en Partida."}
+          </p>
+        </div>
+      )}
+      {selectedAction && (
+        <ActionDetails
+          key={selectedAction.key}
+          action={selectedAction}
+          character={character}
+          saving={saving}
+          onUpdate={onUpdate}
+          onToggleFavorite={onToggleFavorite}
+          onClose={() => setSelected(null)}
+          onEdit={() => {
+            setEditor({ item: selectedAction.item });
+            setSelected(null);
+          }}
+          onDelete={() => {
+            setDeleting(selectedAction);
+            setSelected(null);
+          }}
+        />
+      )}
+      {editor && (
+        <ResourceEditor
+          kind="spell"
+          item={editor.item}
+          onClose={() => setEditor(null)}
+          onSave={save}
+        />
+      )}
+      {deleting && (
+        <DeleteSheet
+          name={deleting.name}
+          onClose={() => setDeleting(null)}
+          onConfirm={() =>
+            onUpdate({
+              spells: character.spells.filter(
+                (spell) => spell._id !== deleting.itemId,
+              ),
+              quickActions: (character.quickActions || []).filter(
+                (entry) => actionKey(entry) !== deleting.key,
+              ),
+            })
+          }
+        />
+      )}
+    </section>
   );
 }

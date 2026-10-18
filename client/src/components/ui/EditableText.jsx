@@ -1,60 +1,58 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef, useState } from "react";
+import Icon from "./Icon";
 
-export default function EditableText({ value, onSave, label, className = "" }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentValue, setCurrentValue] = useState(value);
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    setCurrentValue(value);
-  }, [value]);
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isEditing]);
-
-  const handleSave = () => {
-    setIsEditing(false);
-    if (currentValue !== value) {
-      onSave(currentValue);
-    }
+export default function EditableText({
+  value,
+  onSave,
+  label = "dato",
+  className = "",
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const active = useRef(false);
+  const finish = () => {
+    if (!active.current) return;
+    active.current = false;
+    setEditing(false);
+    const next = draft.trim();
+    if (next && next !== value) onSave(next);
   };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") handleSave();
-    if (e.key === "Escape") {
-      setCurrentValue(value);
-      setIsEditing(false);
-    }
-  };
-
-  if (isEditing) {
+  if (editing)
     return (
       <input
-        ref={inputRef}
-        type="text"
-        value={currentValue}
-        onChange={(e) => setCurrentValue(e.target.value)}
-        onBlur={handleSave}
-        onKeyDown={handleKeyDown}
-        className={`bg-white/10 text-white border-b-2 border-amber-500/50 px-2 py-1 outline-none focus:border-amber-400 w-full shadow-inner ${className}`}
-        placeholder={label}
+        autoFocus
+        aria-label={label}
+        value={draft}
+        onFocus={(event) => event.target.select()}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={finish}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            finish();
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            active.current = false;
+            setEditing(false);
+          }
+        }}
+        className={`editable-input ${className}`}
       />
     );
-  }
-
   return (
-    <div
-      onClick={() => setIsEditing(true)}
-      className={`cursor-pointer group flex items-center gap-2 ${className}`}
-      title={`Click para editar ${label}`}
+    <button
+      type="button"
+      className={`editable-control ${className}`}
+      title={`Editar ${label}`}
+      aria-label={`Editar ${label}: ${value || "Vacío"}`}
+      onClick={() => {
+        setDraft(value || "");
+        active.current = true;
+        setEditing(true);
+      }}
     >
-      <span>{value || <span className="text-slate-500 italic">Vacío</span>}</span>
-      <span className="opacity-0 group-hover:opacity-100 text-amber-500 text-[12px] transition-opacity">
-        ✎
-      </span>
-    </div>
+      <span>{value || "Sin definir"}</span>
+      <Icon name="edit" size={11} />
+    </button>
   );
 }

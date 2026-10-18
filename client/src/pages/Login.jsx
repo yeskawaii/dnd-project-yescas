@@ -1,109 +1,127 @@
-import { useState, useContext } from 'react';
-import api from '../api/axios';
-import { AuthContext } from '../context/AuthContext';
-import { Toaster, toast } from 'sonner';
+import { useState, useContext } from "react";
+import api from "../api/axios";
+import { AuthContext } from "../context/auth-context";
+import { Toaster, toast } from "sonner";
+import Icon from "../components/ui/Icon";
 
-const Login = () => {
-  const [isRegister, setIsRegister] = useState(false);
-  const [form, setForm] = useState({ username: '', password: '' });
+export default function Login() {
+  const [register, setRegister] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [form, setForm] = useState({ username: "", password: "" });
   const { login } = useContext(AuthContext);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const endpoint = isRegister ? '/auth/register' : '/auth/login';
-    
-    const promise = api.post(endpoint, form);
-
-    toast.promise(promise, {
-      loading: isRegister ? 'Forjando tu destino...' : 'Abriendo la taberna...',
-      success: (res) => {
-        if (isRegister) {
-          setIsRegister(false);
-          setForm({ username: '', password: '' });
-          return "¡Cuenta creada! Ahora identifícate, viajero.";
-        } else {
-          login(res.data.user, res.data.token);
-          return `¡De vuelta a la acción, ${res.data.user.username}!`;
-        }
-      },
-      error: (err) => err.response?.data?.error || "La red falló, tira de nuevo.",
-    });
+  const submit = async (event) => {
+    event.preventDefault();
+    if (pending) return;
+    setPending(true);
+    try {
+      const { data } = await api.post(
+        register ? "/auth/register" : "/auth/login",
+        form,
+      );
+      if (register) {
+        setRegister(false);
+        setForm({ username: "", password: "" });
+        toast.success("Cuenta creada. Ya puedes entrar a tu aventura.");
+      } else login(data.user, data.token);
+    } catch (error) {
+      toast.error(
+        error.response?.data?.error ||
+          "No se pudo conectar. Inténtalo de nuevo.",
+      );
+    } finally {
+      setPending(false);
+    }
   };
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="entry-page">
       <Toaster position="top-center" richColors theme="dark" />
-
-      {/* Orbes de luz de fondo para el Login */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-500/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen"></div>
-
-      <div className="w-full max-w-sm relative z-10">
-        <form onSubmit={handleSubmit} className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
-          
-          <div className="flex flex-col items-center mb-8">
-            <span className={`text-5xl mb-4 transition-transform duration-700 ${isRegister ? 'rotate-[360deg] drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'rotate-0 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]'}`}>
-              {isRegister ? '📜' : '🗝️'}
-            </span>
-            <h2 className={`text-2xl font-bold tracking-wider uppercase transition-colors duration-500 ${isRegister ? 'text-emerald-400' : 'text-amber-400'}`}>
-              {isRegister ? 'Registro de Héroe' : 'La Taberna'}
-            </h2>
-            <p className="text-[10px] text-slate-400 font-semibold tracking-[0.2em] uppercase mt-1">
-              {isRegister ? 'Paso 1: Crea tu Leyenda' : 'Paso 0: Identifícate'}
-            </p>
-          </div>
-          
-          <div className="space-y-5">
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 mb-1.5 block ml-1 uppercase tracking-widest">Aventurero</label>
-              <input 
-                type="text" required value={form.username}
-                className="w-full bg-black/20 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-amber-400/50 focus:bg-white/5 transition-all shadow-inner"
-                onChange={e => setForm({...form, username: e.target.value})}
-              />
-            </div>
-            
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 mb-1.5 block ml-1 uppercase tracking-widest">Palabra Secreta</label>
-              <input 
-                type="password" required value={form.password}
-                className="w-full bg-black/20 border border-white/10 p-3 rounded-xl text-white outline-none focus:border-amber-400/50 focus:bg-white/5 transition-all shadow-inner"
-                onChange={e => setForm({...form, password: e.target.value})}
-              />
-            </div>
-          </div>
-          
-          <button className={`w-full mt-8 p-3.5 rounded-xl font-bold uppercase text-xs tracking-widest transition-all active:scale-95 shadow-lg border ${
-            isRegister 
-              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50' 
-              : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/50'
-          }`}>
-            {isRegister ? 'Comenzar Crónica' : 'Entrar al Juego'}
+      <header className="entry-topbar">
+        <div className="wordmark">
+          <Icon name="dice" size={25} />
+          Grimorio
+        </div>
+        <span className="edition-pill">D&D 3.5</span>
+      </header>
+      <div className="login-panel">
+        <div className="entry-heading">
+          <p className="eyebrow">Tu lugar en la mesa</p>
+          <h1>
+            {register ? (
+              <>
+                Una nueva <em>leyenda.</em>
+              </>
+            ) : (
+              <>
+                La aventura <em>continúa.</em>
+              </>
+            )}
+          </h1>
+          <p>
+            {register
+              ? "Crea tu cuenta y empieza a escribir tu historia."
+              : "Entra para encontrar tus personajes y volver a la partida."}
+          </p>
+        </div>
+        <form onSubmit={submit}>
+          <label className="form-field">
+            Nombre de aventurero
+            <input
+              type="text"
+              required
+              autoComplete="username"
+              value={form.username}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  username: event.target.value,
+                }))
+              }
+              placeholder="Tu nombre de usuario"
+            />
+          </label>
+          <label className="form-field">
+            Contraseña
+            <input
+              type="password"
+              required
+              autoComplete={register ? "new-password" : "current-password"}
+              value={form.password}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  password: event.target.value,
+                }))
+              }
+              placeholder="Tu palabra secreta"
+            />
+          </label>
+          <button className="button primary full-width" disabled={pending}>
+            {pending
+              ? "Abriendo la aventura…"
+              : register
+                ? "Crear mi cuenta"
+                : "Entrar a la aventura"}
+            <Icon name="chevron" size={17} />
           </button>
-
-          <div className="mt-8 pt-6 border-t border-white/10 text-center">
-            <p className="text-[10px] font-semibold text-slate-500 tracking-widest uppercase mb-3">
-              {isRegister ? '¿Ya eres de los nuestros?' : '¿Aún no tienes ficha?'}
-            </p>
-            <button 
-              type="button"
-              onClick={() => {
-                  setIsRegister(!isRegister);
-                  setForm({ username: '', password: '' });
-              }}
-              className={`text-xs font-bold uppercase tracking-wider py-2 px-5 rounded-full border transition-all ${
-                isRegister 
-                  ? 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10' 
-                  : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
-              }`}
-            >
-              {isRegister ? 'Ir al Login' : 'Crear Ficha'}
-            </button>
-          </div>
         </form>
+        <div className="login-switch">
+          <p>
+            {register
+              ? "¿Ya tienes una historia aquí?"
+              : "¿Es tu primera visita?"}
+          </p>
+          <button
+            className="text-button"
+            disabled={pending}
+            onClick={() => {
+              setRegister((value) => !value);
+              setForm({ username: "", password: "" });
+            }}
+          >
+            {register ? "Entrar con mi cuenta" : "Crear una cuenta"}
+          </button>
+        </div>
       </div>
     </div>
   );
-};
-
-export default Login;
+}

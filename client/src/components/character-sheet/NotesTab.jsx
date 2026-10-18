@@ -1,78 +1,152 @@
 import { useState } from "react";
-import NoteCard from "../NoteCard";
-import UpdateValueModal from "../UpdateValueModal";
-import api from "../../api/axios";
+import Icon from "../ui/Icon";
+import BottomSheet from "../ui/BottomSheet";
+import DeleteSheet from "../ui/DeleteSheet";
+import ResourceEditor from "./ResourceEditor";
 
-export default function NotesTab({ character, onUpdate }) {
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingNote, setEditingNote] = useState(null);
-
-  const handleDeleteNote = (id) => {
-    api.delete(`/character/${character._id}/notes/${id}`).then(() => {
-      onUpdate({ notes: character.notes.filter(x => x._id !== id) });
-    });
-  };
-
-  const handleSaveNote = (val) => {
-    if (editingNote) {
-      api.patch(`/character/${character._id}/notes/${editingNote._id}`, { content: val }).then((res) => {
-        onUpdate({ notes: character.notes.map(n => n._id === editingNote._id ? res.data : n) });
-        setIsEditModalOpen(false);
-      });
-    } else {
-      api.post(`/character/${character._id}/notes`, { title: "Diario", content: val, color: "cyan" }).then((res) => {
-        onUpdate({ notes: [...(character.notes || []), res.data] });
-        setIsEditModalOpen(false);
-      });
-    }
-  };
-
-  const openAddNote = () => {
-    setEditingNote(null);
-    setIsEditModalOpen(true);
-  };
-
-  const openEditNote = (note) => {
-    setEditingNote(note);
-    setIsEditModalOpen(true);
-  };
-
+export default function NotesTab({ character, onUpdate, saving }) {
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState(null);
+  const [editor, setEditor] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const notes = [...(character.notes || [])].sort(
+    (a, b) => new Date(b.date || 0) - new Date(a.date || 0),
+  );
+  const visible = notes.filter((note) =>
+    `${note.title} ${note.content}`
+      .toLocaleLowerCase()
+      .includes(search.toLocaleLowerCase()),
+  );
+  const selectedNote = notes.find((note) => note._id === selected);
+  const formatDate = (value) =>
+    value
+      ? new Date(value).toLocaleDateString("es-MX", {
+          day: "numeric",
+          month: "short",
+        })
+      : "Tu aventura";
   return (
-    <div className="pb-10">
-      <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -ml-32 -mb-32 pointer-events-none"></div>
-        <div className="flex justify-between items-center mb-6 relative z-10">
-          <h2 className="text-xl font-bold text-white tracking-wider uppercase">Diario de Aventuras</h2>
-          <button 
-            onClick={openAddNote} 
-            className="bg-white/5 border border-white/20 px-4 py-2 rounded-full text-[10px] font-bold text-slate-300 hover:bg-white/10 hover:text-white transition-colors uppercase tracking-widest"
-          >
-            + ESCRIBIR
-          </button>
+    <section className="collection-page">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Que no se pierda la historia</p>
+          <h2>Diario de aventuras</h2>
         </div>
-        <div className="columns-1 md:columns-2 gap-4 relative z-10">
-          {character.notes?.map((n) => (
-            <NoteCard 
-              key={n._id} 
-              note={n} 
-              onDelete={() => handleDeleteNote(n._id)} 
-              onEdit={() => openEditNote(n)} 
-            />
-          ))}
-        </div>
+        <button
+          className="button primary compact"
+          disabled={saving}
+          onClick={() => setEditor({ item: null })}
+        >
+          <Icon name="plus" size={17} />
+          Escribir
+        </button>
       </div>
-
-      {isEditModalOpen && (
-        <UpdateValueModal 
-          isOpen={isEditModalOpen} 
-          title={editingNote ? "Editar Nota" : "Nueva Nota"} 
-          label="DIARIO" 
-          initialValue={editingNote ? editingNote.content : ""} 
-          type={editingNote ? "edit_note" : "note"} 
-          onClose={() => setIsEditModalOpen(false)} 
-          onUpdate={handleSaveNote} 
+      <label className="search-field">
+        <Icon name="search" />
+        <input
+          aria-label="Buscar notas"
+          placeholder="Busca una pista, un nombre, un recuerdo…"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </label>
+      <p className="journal-count">
+        {visible.length}{" "}
+        {visible.length === 1
+          ? "recuerdo de tu aventura"
+          : "recuerdos de tu aventura"}
+      </p>
+      <div className="journal-grid">
+        {visible.map((note) => (
+          <button
+            key={note._id}
+            className="journal-card"
+            onClick={() => setSelected(note._id)}
+          >
+            <time dateTime={note.date}>
+              <Icon name="note" size={13} />
+              {formatDate(note.date)}
+            </time>
+            <h3>{note.title || "Una nueva historia"}</h3>
+            <p>{note.content}</p>
+          </button>
+        ))}
+      </div>
+      {!visible.length && (
+        <div className="empty-state">
+          <Icon name="note" size={32} />
+          <h3>
+            {search
+              ? "Todavía no hay pistas con ese nombre"
+              : "Toda aventura merece contarse"}
+          </h3>
+          <p>
+            {search
+              ? "Prueba otra palabra para encontrar tu nota."
+              : "Guarda nombres, misiones pendientes y esos detalles que tu DM dejó caer."}
+          </p>
+        </div>
+      )}
+      {selectedNote && (
+        <BottomSheet
+          title={selectedNote.title || "Diario"}
+          subtitle={formatDate(selectedNote.date)}
+          onClose={() => setSelected(null)}
+        >
+          <p className="detail-description">{selectedNote.content}</p>
+          <div className="detail-footer">
+            <button
+              className="button secondary"
+              onClick={() => {
+                setEditor({ item: selectedNote });
+                setSelected(null);
+              }}
+            >
+              <Icon name="edit" />
+              Editar
+            </button>
+            <button
+              className="button danger"
+              onClick={() => {
+                setDeleting(selectedNote);
+                setSelected(null);
+              }}
+            >
+              <Icon name="trash" />
+              Eliminar
+            </button>
+          </div>
+        </BottomSheet>
+      )}
+      {editor && (
+        <ResourceEditor
+          kind="note"
+          item={editor.item}
+          onClose={() => setEditor(null)}
+          onSave={(data) =>
+            onUpdate({
+              notes: editor.item
+                ? character.notes.map((note) =>
+                    note._id === data._id ? data : note,
+                  )
+                : [...(character.notes || []), data],
+            })
+          }
         />
       )}
-    </div>
+      {deleting && (
+        <DeleteSheet
+          name={deleting.title || "Nota"}
+          onClose={() => setDeleting(null)}
+          onConfirm={() =>
+            onUpdate({
+              notes: character.notes.filter(
+                (note) => note._id !== deleting._id,
+              ),
+            })
+          }
+        />
+      )}
+    </section>
   );
 }

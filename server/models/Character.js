@@ -60,6 +60,20 @@ const characterSchema = new mongoose.Schema(
     speed: { type: String, default: "30 ft" }, // Velocidad
     initiativeMisc: { type: Number, default: 0 }, // Para dotes como Iniciativa Mejorada
 
+    // Orden de los accesos rápidos de cada personaje, sincronizado entre dispositivos.
+    quickActions: {
+      type: [{
+        _id: false,
+        kind: { type: String, enum: ['attack', 'spell', 'item', 'skill'], required: true },
+        itemId: { type: String, required: true },
+      }],
+      default: [],
+      validate: {
+        validator: entries => new Set(entries.map(entry => `${entry.kind}:${entry.itemId}`)).size === entries.length,
+        message: 'Los accesos rápidos no pueden repetirse',
+      },
+    },
+
     traits: [
       {
         name: String,

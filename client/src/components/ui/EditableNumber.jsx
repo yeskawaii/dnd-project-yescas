@@ -1,72 +1,68 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef, useState } from "react";
+import Icon from "./Icon";
 
-export default function EditableNumber({ value, onSave, label, className = "", min = undefined, max = undefined }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentValue, setCurrentValue] = useState(value);
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    setCurrentValue(value);
-  }, [value]);
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
-
-  const handleSave = () => {
-    setIsEditing(false);
-    let numVal = Number(currentValue);
-    
-    if (isNaN(numVal)) {
-      setCurrentValue(value);
-      return;
-    }
-
-    if (min !== undefined && numVal < min) numVal = min;
-    if (max !== undefined && numVal > max) numVal = max;
-
-    if (numVal !== value) {
-      onSave(numVal);
-    } else {
-      setCurrentValue(value);
-    }
+export default function EditableNumber({
+  value,
+  onSave,
+  label = "valor",
+  className = "",
+  min,
+  max,
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const active = useRef(false);
+  const finish = () => {
+    if (!active.current) return;
+    active.current = false;
+    setEditing(false);
+    if (draft === "" || !Number.isFinite(Number(draft))) return;
+    let next = Number(draft);
+    if (min !== undefined) next = Math.max(min, next);
+    if (max !== undefined) next = Math.min(max, next);
+    if (next !== value) onSave(next);
   };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") handleSave();
-    if (e.key === "Escape") {
-      setCurrentValue(value);
-      setIsEditing(false);
-    }
-  };
-
-  if (isEditing) {
+  if (editing)
     return (
       <input
-        ref={inputRef}
+        autoFocus
+        aria-label={label}
         type="number"
-        value={currentValue}
-        onChange={(e) => setCurrentValue(e.target.value)}
-        onBlur={handleSave}
-        onKeyDown={handleKeyDown}
-        className={`bg-white/10 text-white border-b-2 border-amber-500/50 px-1 outline-none focus:border-amber-400 w-16 text-center shadow-inner ${className}`}
+        step="any"
+        inputMode={min !== undefined && min >= 0 ? "decimal" : undefined}
+        min={min}
+        max={max}
+        value={draft}
+        onFocus={(event) => event.target.select()}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={finish}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            finish();
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            active.current = false;
+            setEditing(false);
+          }
+        }}
+        className={`editable-input editable-number ${className}`}
       />
     );
-  }
-
   return (
-    <div
-      onClick={() => setIsEditing(true)}
-      className={`cursor-pointer group flex items-center gap-1 justify-center ${className}`}
-      title={`Click para editar ${label}`}
+    <button
+      type="button"
+      title={`Editar ${label}`}
+      aria-label={`Editar ${label}: ${value ?? 0}`}
+      className={`editable-control editable-number ${className}`}
+      onClick={() => {
+        setDraft(String(value ?? 0));
+        active.current = true;
+        setEditing(true);
+      }}
     >
       <span>{value ?? 0}</span>
-      <span className="opacity-0 group-hover:opacity-100 text-amber-500 text-[12px] transition-opacity">
-        ✎
-      </span>
-    </div>
+      <Icon name="edit" size={10} />
+    </button>
   );
 }

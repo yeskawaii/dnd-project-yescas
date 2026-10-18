@@ -1,111 +1,235 @@
 import { useState } from "react";
+import BottomSheet from "./ui/BottomSheet";
+import Icon from "./ui/Icon";
 import EditableNumber from "./ui/EditableNumber";
 
-const HealthTracker = ({ currentHp, maxHp, onEditHp, onEditMax }) => {
-  const [isModifying, setIsModifying] = useState(false);
-  const [modValue, setModValue] = useState("");
-  
-  const percentage = maxHp ? Math.min((currentHp / maxHp) * 100, 100) : 0;
-
-  const handleApply = (type) => {
-    const val = Number(modValue);
-    if (isNaN(val) || val <= 0) {
-      setIsModifying(false);
-      setModValue("");
-      return;
+export default function HealthTracker({
+  currentHp = 0,
+  maxHp = 10,
+  onEditHp,
+  onEditMax,
+  saving = false,
+}) {
+  const [mode, setMode] = useState(null);
+  const [amount, setAmount] = useState("");
+  const [undo, setUndo] = useState(null);
+  const [pending, setPending] = useState(false);
+  const percentage = Math.max(
+    0,
+    Math.min(100, maxHp > 0 ? (currentHp / maxHp) * 100 : 0),
+  );
+  const preview =
+    mode === "heal"
+      ? Math.max(currentHp, Math.min(maxHp, currentHp + Number(amount)))
+      : currentHp - Number(amount);
+  const busy = saving || pending;
+  const open = (nextMode) => {
+    setAmount("");
+    setMode(nextMode);
+  };
+  const type = (value) =>
+    setAmount((previous) =>
+      value === "delete"
+        ? previous.slice(0, -1)
+        : previous.length < 4
+          ? previous === "0"
+            ? value
+            : previous + value
+          : previous,
+    );
+  const apply = async () => {
+    if (!amount || Number(amount) <= 0 || busy || preview === currentHp) return;
+    setPending(true);
+    try {
+      const result = await onEditHp(preview);
+      if (result === null) return;
+      setUndo({ before: currentHp, after: preview });
+      setMode(null);
+    } finally {
+      setPending(false);
     }
-    
-    let newHp = currentHp;
-    if (type === "heal") {
-      newHp = currentHp + val;
-      if (newHp > maxHp) newHp = maxHp;
-    } else if (type === "damage") {
-      newHp = currentHp - val;
-      if (newHp < 0) newHp = 0;
+  };
+  const restore = async () => {
+    if (!undo || currentHp !== undo.after || busy) return;
+    setPending(true);
+    try {
+      const result = await onEditHp(undo.before);
+      if (result !== null) setUndo(null);
+    } finally {
+      setPending(false);
     }
-    
-    onEditHp(newHp);
-    setIsModifying(false);
-    setModValue("");
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div className="flex flex-col">
-          <div className="flex items-center text-[10px] font-bold text-slate-400 tracking-widest mb-1 uppercase">
-            <span>Vida Máxima:</span>
-            <EditableNumber 
-              value={maxHp} 
-              onSave={onEditMax} 
-              className="ml-1 text-slate-300" 
-              min={1} 
-            />
-          </div>
-          <div className="flex items-end gap-1">
-            <EditableNumber 
-              value={currentHp} 
-              onSave={onEditHp} 
-              className="text-5xl font-black text-white leading-none tracking-tighter" 
-            />
-            <span className="text-xl text-slate-500 font-bold mb-1">HP</span>
-          </div>
-        </div>
-
-        {/* Action Area */}
-        <div className="flex-shrink-0 w-full md:w-auto">
-          {!isModifying ? (
-            <button 
-              onClick={() => setIsModifying(true)}
-              className="w-full md:w-auto bg-white/5 border border-white/20 px-5 py-2.5 rounded-2xl text-amber-400 font-bold text-[10px] tracking-widest uppercase hover:bg-white/10 hover:border-amber-400/50 transition-all active:scale-95 shadow-lg"
-            >
-              ± Modificar
+    <>
+      <section
+        className={`health-card ${percentage <= 25 ? "health-low" : ""}`}
+        aria-label="Puntos de vida"
+      >
+        <div className="health-top">
+          <span className="eyebrow">
+            <Icon name="heart" size={15} />
+            Puntos de vida
+          </span>
+          {undo && currentHp === undo.after ? (
+            <button className="text-button" onClick={restore} disabled={busy}>
+              <Icon name="undo" size={15} />
+              Deshacer
             </button>
           ) : (
-            <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-2xl border border-white/10">
-              <input 
-                type="number"
-                value={modValue}
-                onChange={(e) => setModValue(e.target.value)}
-                placeholder="0"
-                className="w-16 bg-transparent text-white font-bold text-center outline-none px-2"
-                autoFocus
-                onKeyDown={(e) => {
-                  if(e.key === "Escape") { setIsModifying(false); setModValue(""); }
-                  if(e.key === "Enter") handleApply("damage"); // Default to damage on enter for fast combat
-                }}
-              />
-              <div className="flex gap-1">
-                <button 
-                  onClick={() => handleApply("damage")}
-                  className="bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase hover:bg-rose-500/40 transition-colors"
-                >
-                  Daño
-                </button>
-                <button 
-                  onClick={() => handleApply("heal")}
-                  className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase hover:bg-emerald-500/40 transition-colors"
-                >
-                  Curar
-                </button>
-              </div>
-            </div>
+            <span className="health-status">
+              {currentHp <= 0
+                ? "En peligro"
+                : percentage <= 25
+                  ? "Vida baja"
+                  : "En marcha"}
+            </span>
           )}
         </div>
-      </div>
-      
-      <div className="w-full h-4 bg-black/40 rounded-full overflow-hidden border border-white/5 shadow-inner">
-        <div 
-          className={`h-full transition-all duration-700 ease-out shadow-[0_0_15px_rgba(0,0,0,0.5)] ${
-            percentage < 25 ? 'bg-rose-500 shadow-rose-500/50' : 
-            percentage > 100 ? 'bg-amber-400 shadow-amber-400/50' : 
-            'bg-emerald-500 shadow-emerald-500/50'
-          }`}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
+        <button
+          className="health-display"
+          onClick={() => open("damage")}
+          aria-label={`Vida ${currentHp} de ${maxHp}. Toca para modificar`}
+        >
+          <span>{currentHp}</span>
+          <span className="health-max">
+            / {maxHp}
+            <small>PV</small>
+          </span>
+          <span className="health-edit">
+            <Icon name="edit" size={17} />
+          </span>
+        </button>
+        <button
+          className="health-track"
+          onClick={() => open("damage")}
+          aria-label="Modificar puntos de vida"
+        >
+          <span style={{ width: `${percentage}%` }} />
+        </button>
+        <div className="health-actions">
+          <button onClick={() => open("damage")} disabled={busy}>
+            <Icon name="minus" size={17} />
+            Recibir daño
+          </button>
+          <span />
+          <button onClick={() => open("heal")} disabled={busy}>
+            <Icon name="plus" size={17} />
+            Curar
+          </button>
+        </div>
+      </section>
+      {mode && (
+        <BottomSheet
+          title="Cuida tu aventura"
+          subtitle="Puntos de vida"
+          onClose={() => {
+            if (!pending) setMode(null);
+          }}
+        >
+          <div className="segmented">
+            <button
+              className={mode === "damage" ? "active damage" : ""}
+              onClick={() => setMode("damage")}
+            >
+              Recibir daño
+            </button>
+            <button
+              className={mode === "heal" ? "active" : ""}
+              onClick={() => setMode("heal")}
+            >
+              Curar
+            </button>
+          </div>
+          <label className="health-number-label">
+            Cantidad
+            <input
+              className="health-number"
+              aria-label="Cantidad de puntos de vida"
+              readOnly
+              inputMode="none"
+              value={amount || "0"}
+              onKeyDown={(event) => {
+                if (/^\d$/.test(event.key)) {
+                  event.preventDefault();
+                  type(event.key);
+                } else if (event.key === "Backspace") {
+                  event.preventDefault();
+                  type("delete");
+                } else if (event.key === "Enter") {
+                  event.preventDefault();
+                  apply();
+                }
+              }}
+            />
+          </label>
+          <div className="health-preview" aria-live="polite">
+            <span>Tu vida</span>
+            <strong>
+              {currentHp} <span>→</span> {preview} <small>/ {maxHp}</small>
+            </strong>
+          </div>
+          <div className="quick-amounts">
+            {[1, 5, 10, 20].map((value) => (
+              <button key={value} onClick={() => setAmount(String(value))}>
+                {value} PV
+              </button>
+            ))}
+          </div>
+          <div className="number-pad">
+            {[
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "clear",
+              "0",
+              "delete",
+            ].map((value) => (
+              <button
+                key={value}
+                onClick={() =>
+                  value === "clear" ? setAmount("") : type(value)
+                }
+                aria-label={
+                  value === "delete"
+                    ? "Borrar último dígito"
+                    : value === "clear"
+                      ? "Limpiar cantidad"
+                      : value
+                }
+              >
+                {value === "delete" ? "⌫" : value === "clear" ? "C" : value}
+              </button>
+            ))}
+          </div>
+          <button
+            className={`button full-width ${mode === "damage" ? "danger filled" : "primary"}`}
+            disabled={
+              !amount || Number(amount) <= 0 || busy || preview === currentHp
+            }
+            onClick={apply}
+          >
+            {pending
+              ? "Guardando…"
+              : `${mode === "damage" ? "Aplicar" : "Recuperar"} ${Number(amount)} puntos`}
+          </button>
+          <div className="max-health-editor">
+            <span>Vida máxima</span>
+            <EditableNumber
+              value={maxHp}
+              onSave={onEditMax}
+              min={1}
+              label="Vida máxima"
+            />
+          </div>
+        </BottomSheet>
+      )}
+    </>
   );
-};
-
-export default HealthTracker;
+}

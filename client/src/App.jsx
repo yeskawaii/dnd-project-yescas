@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import { AuthContext } from "./context/AuthContext";
+import { AuthContext } from "./context/auth-context";
 import { Toaster, toast } from "sonner";
 import api from "./api/axios";
 
@@ -20,18 +20,40 @@ function App() {
   const [mode, setMode] = useState("lobby"); // lobby | dm | player
 
   // ESTADO GLOBAL MODAL DE BORRADO
-  const [deleteAlert, setDeleteAlert] = useState({ isOpen: false, title: "", msg: "", action: null });
+  const [deleteAlert, setDeleteAlert] = useState({
+    isOpen: false,
+    title: "",
+    msg: "",
+    action: null,
+  });
 
   const askDelete = (title, msg, action) => {
     setDeleteAlert({ isOpen: true, title, msg, action });
   };
 
+  const handleLogout = () => {
+    setSelectedChar(null);
+    setCharacters([]);
+    setMode("lobby");
+    setDeleteAlert({ isOpen: false, title: "", msg: "", action: null });
+    logout();
+  };
+
   useEffect(() => {
+    let active = true;
     if (user) {
-      api.get("/character")
-        .then((res) => setCharacters(res.data.filter(Boolean)))
-        .catch(() => toast.error("Error de conexión al cargar héroes"));
+      api
+        .get("/character")
+        .then((res) => {
+          if (active) setCharacters(res.data.filter(Boolean));
+        })
+        .catch(() => {
+          if (active) toast.error("No se pudieron cargar tus personajes");
+        });
     }
+    return () => {
+      active = false;
+    };
   }, [user]);
 
   if (loading) {
@@ -50,11 +72,13 @@ function App() {
     <div className="min-h-screen text-slate-100 font-sans relative overflow-x-hidden">
       <Toaster position="top-center" richColors theme="dark" />
 
-      {mode === "lobby" && <Lobby onSelectMode={setMode} logout={logout} />}
+      {mode === "lobby" && (
+        <Lobby onSelectMode={setMode} logout={handleLogout} />
+      )}
       {mode === "dm" && <DMDashboard onBack={() => setMode("lobby")} />}
-      
+
       {mode === "player" && !selectedChar && (
-        <CharacterSelect 
+        <CharacterSelect
           characters={characters}
           setCharacters={setCharacters}
           setSelectedChar={setSelectedChar}
@@ -64,24 +88,24 @@ function App() {
       )}
 
       {mode === "player" && selectedChar && (
-        <CharacterSheet 
+        <CharacterSheet
+          key={selectedChar._id}
           character={selectedChar}
           setCharacters={setCharacters}
           setSelectedChar={setSelectedChar}
-          setMode={setMode}
-          logout={logout}
+          logout={handleLogout}
         />
       )}
 
-      <ConfirmDeleteModal 
-        isOpen={deleteAlert.isOpen} 
-        title={deleteAlert.title} 
-        message={deleteAlert.msg} 
-        onClose={() => setDeleteAlert({ ...deleteAlert, isOpen: false })} 
-        onConfirm={() => { 
-          deleteAlert.action(); 
-          setDeleteAlert({ ...deleteAlert, isOpen: false }); 
-        }} 
+      <ConfirmDeleteModal
+        isOpen={deleteAlert.isOpen}
+        title={deleteAlert.title}
+        message={deleteAlert.msg}
+        onClose={() => setDeleteAlert({ ...deleteAlert, isOpen: false })}
+        onConfirm={() => {
+          deleteAlert.action();
+          setDeleteAlert({ ...deleteAlert, isOpen: false });
+        }}
       />
     </div>
   );

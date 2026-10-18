@@ -1,7 +1,6 @@
 import express from 'express';
 import Character from '../models/Character.js';
 import { protect } from '../middleware/authMiddleware.js';
-import { generateCharacterStats } from '../services/geminiService.js';
 
 const router = express.Router();
 
@@ -18,81 +17,15 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 2. POST: Crear personaje (con IA opcional)
+// 2. POST: Crear una ficha editable con los valores iniciales del modelo
 router.post('/', async (req, res) => {
   try {
-    const { name, prompt, charClass } = req.body;
-    let newCharData = {
+    const { name, charClass } = req.body ?? {};
+    const newChar = await Character.create({
       user: req.user,
-      name: name || "Nuevo Aventurero",
-      class: charClass || "Guerrero", 
-      level: 1,
-      race: "Humano",
-      experience: 0, 
-      physicalWeight: 150, 
-      alignment: "N",
-      deity: "Ninguna",
-      baseAttack: 0,
-      initiativeMisc: 0,
-      speed: "30 ft",
-      saves: { fort: 0, ref: 0, will: 0 },
-      armorClass: { armor: 0, shield: 0, natural: 0, misc: 0 },
-      stats: { Fuerza: 10, Destreza: 10, Constitución: 10, Inteligencia: 10, Sabiduría: 10, Carisma: 10 },
-      hp: { current: 10, max: 10 },
-      inventory: [],
-      spells: [],
-      notes: [],
-      attacks: []
-    };
-
-    if (prompt) {
-      // 1. Llamar a la IA
-      const aiData = await generateCharacterStats(prompt);
-      
-      // 2. Mapear datos
-      newCharData.name = name || aiData.nombre || newCharData.name;
-      newCharData.class = aiData.tipo || newCharData.class;
-      // Extraemos el número si es string (ej. "3")
-      const parsedLevel = parseInt(aiData.nivel_o_cr);
-      newCharData.level = isNaN(parsedLevel) ? 1 : parsedLevel;
-      
-      if (aiData.hp) {
-        newCharData.hp = { current: aiData.hp, max: aiData.hp };
-      }
-      if (aiData.ac) {
-        newCharData.armorClass.armor = aiData.ac - 10; // Suponiendo base 10 + armadura
-      }
-      if (aiData.stats) {
-        newCharData.stats = {
-          Fuerza: aiData.stats.FUE || 10,
-          Destreza: aiData.stats.DES || 10,
-          Constitución: aiData.stats.CON || 10,
-          Inteligencia: aiData.stats.INT || 10,
-          Sabiduría: aiData.stats.SAB || 10,
-          Carisma: aiData.stats.CAR || 10
-        };
-      }
-      if (aiData.ataques && Array.isArray(aiData.ataques)) {
-        newCharData.attacks = aiData.ataques.map(atk => ({
-          name: atk.arma,
-          bonus: atk.bono,
-          damage: atk.dano,
-          crit: "x2", // Default
-          type: "F",  // Default
-          range: "Cuerpo a cuerpo"
-        }));
-      }
-      
-      if (aiData.habilidades_clave && Array.isArray(aiData.habilidades_clave)) {
-        newCharData.notes.push({
-          title: "Habilidades Clave (IA)",
-          content: aiData.habilidades_clave.join(", "),
-          color: "cyan"
-        });
-      }
-    }
-    
-    const newChar = await Character.create(newCharData);
+      name: typeof name === "string" && name.trim() ? name.trim() : "Nuevo Aventurero",
+      class: typeof charClass === "string" && charClass.trim() ? charClass.trim() : "Guerrero",
+    });
     res.status(201).json(newChar);
   } catch (err) {
     console.error(err);
@@ -116,8 +49,8 @@ router.patch('/:charId/update', async (req, res) => {
   try {
     const updates = req.body;
     
-    const updatedChar = await Character.findByIdAndUpdate(
-      req.params.charId,
+    const updatedChar = await Character.findOneAndUpdate(
+      { _id: req.params.charId, user: req.user },
       { $set: updates },
       { 
         new: true,
