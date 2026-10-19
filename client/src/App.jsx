@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from "react";
+import { lazy, Suspense, useEffect, useState, useContext } from "react";
 import { AuthContext } from "./context/auth-context";
 import { Toaster, toast } from "sonner";
 import api from "./api/axios";
@@ -6,12 +6,13 @@ import api from "./api/axios";
 // PÁGINAS PRINCIPALES
 import Login from "./pages/Login";
 import Lobby from "./pages/Lobby";
-import DMDashboard from "./pages/DMDashboard";
 import CharacterSelect from "./pages/CharacterSelect";
 import CharacterSheet from "./pages/CharacterSheet";
 
 // COMPONENTES GLOBALES
 import ConfirmDeleteModal from "./components/ConfirmDeleteModal";
+
+const DMDashboard = lazy(() => import("./pages/DMDashboard"));
 
 function App() {
   const { user, logout, loading } = useContext(AuthContext);
@@ -75,7 +76,11 @@ function App() {
       {mode === "lobby" && (
         <Lobby onSelectMode={setMode} logout={handleLogout} />
       )}
-      {mode === "dm" && <DMDashboard onBack={() => setMode("lobby")} />}
+      {mode === "dm" && (
+        <Suspense fallback={<p className="helper-text" role="status">Abriendo la mesa del DM…</p>}>
+          <DMDashboard onBack={() => setMode("lobby")} />
+        </Suspense>
+      )}
 
       {mode === "player" && !selectedChar && (
         <CharacterSelect

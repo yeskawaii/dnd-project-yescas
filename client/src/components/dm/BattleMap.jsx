@@ -61,7 +61,7 @@ export default function BattleMap({
           <p className="eyebrow">Prepara el escenario</p>
           <h2>Mapa táctico</h2>
         </div>
-        <span className="edition-pill">Solo DM</span>
+        <span className="edition-pill">Edición del DM</span>
       </div>
       <p className="helper-text">
         Dibuja casillas y coloca las fichas del encuentro. Selecciona una ficha
@@ -216,8 +216,9 @@ export default function BattleMap({
         ))}
       </div>
       <p className="helper-text">
-        La niebla es una marca de preparación. Este mapa todavía no se comparte
-        en vivo con los jugadores.
+        La niebla oculta las fichas de sus casillas a los jugadores. Activa
+        Compartir el mapa táctico en Compartir para actualizar sus pantallas.
+        Las criaturas permanecen ocultas hasta que las reveles en Combate.
       </p>
       <button
         className="text-button dm-danger"

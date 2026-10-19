@@ -110,3 +110,29 @@ test("an inaccessible character returns 404 instead of being updated", async (co
   );
   assert.equal(res.statusCode, 404);
 });
+
+test("character updates cannot forge campaign membership or change ownership", async (context) => {
+  context.mock.method(Character, "findOneAndUpdate", () => assert.fail("Must not write reserved fields"));
+  for (const data of [{ campaign: characterId }, { user: owner }, { "campaign._id": characterId }, { _id: owner }, { "stats.__proto__.admin": true }, { "$set": { campaign: characterId } }]) {
+    const res = response();
+    await handler("patch", "/:charId/update")({ user: owner, params: { charId: characterId }, body: data }, res);
+    assert.equal(res.statusCode, 400);
+  }
+});
+
+test("legacy note, attack and feat routes also enforce ownership", async (context) => {
+  context.mock.method(Character, "findOne", async (query) => {
+    assert.deepEqual(query, { _id: characterId, user: owner });
+    return null;
+  });
+  context.mock.method(Character, "findById", () => assert.fail("Must not use an unscoped lookup"));
+  for (const [method, path] of [
+    ["post", "/:charId/notes"], ["delete", "/:charId/notes/:noteId"],
+    ["post", "/:charId/attacks"], ["delete", "/:charId/attacks/:attackId"],
+    ["post", "/:charId/feats"], ["delete", "/:charId/feats/:featId"],
+  ]) {
+    const res = response();
+    await handler(method, path)({ user: owner, params: { charId: characterId }, body: {} }, res);
+    assert.equal(res.statusCode, 404);
+  }
+});

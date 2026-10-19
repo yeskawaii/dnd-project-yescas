@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 import api from "../../api/axios";
 import Icon from "../ui/Icon";
@@ -8,6 +8,8 @@ import EntityDetails from "./EntityDetails";
 import NotesPanel from "./NotesPanel";
 import BattleMap from "./BattleMap";
 import CombatPanel from "./CombatPanel";
+import PresentationPanel from "./PresentationPanel";
+import "../shared-table/sharedTable.css";
 import {
   armorClass,
   emptyWorkspace,
@@ -17,6 +19,7 @@ import {
 } from "../../utils/dmWorkspace";
 
 const tabs = [
+  ["presentation", "eye", "Compartir"],
   ["combat", "sword", "Combate"],
   ["party", "shield", "Grupo"],
   ["library", "book", "Criaturas"],
@@ -58,21 +61,21 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
   };
   const ask = (title, message, action) =>
     setConfirmation({ title, message, action });
-  const save = async () => {
+  const save = async (nextWorkspace = workspace, quiet = false) => {
     if (saveLock.current) return;
     saveLock.current = true;
     setSaving(true);
     setSaveError("");
     try {
       const { data } = await api.put(`/campaign/${campaign._id}/workspace`, {
-        workspace,
+        workspace: nextWorkspace,
         revision,
-      });
+      }, { timeout: 15000 });
       setWorkspace(data.workspace);
       setRevision(data.revision);
       setDirty(false);
       setUndo(null);
-      toast.success("Mesa guardada. Puedes retomarla en otra sesión.");
+      if (!quiet) toast.success("Mesa guardada. La vista del grupo está actualizada.");
       return true;
     } catch (error) {
       const message =
@@ -84,6 +87,38 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
     } finally {
       saveLock.current = false;
       setSaving(false);
+    }
+  };
+  const saveLiveTable = useEffectEvent(() => save(workspace, true));
+  useEffect(() => {
+    if (!dirty || saving || saveError || !workspace.presentation?.enabled) return;
+    let timer;
+    const saveWhenReady = () => {
+      // Editors use portals outside the disabled fieldset. Let every editor finish first.
+      if (document.querySelector('[role="dialog"]')) {
+        timer = window.setTimeout(saveWhenReady, 1000);
+        return;
+      }
+      saveLiveTable();
+    };
+    timer = window.setTimeout(saveWhenReady, 1000);
+    return () => window.clearTimeout(timer);
+  }, [dirty, saving, saveError, workspace]);
+  const publish = (nextWorkspace) => {
+    if (saveLock.current) return;
+    change(nextWorkspace);
+    return save(nextWorkspace);
+  };
+  const refreshPlayers = async () => {
+    setRefreshing(true);
+    try {
+      const { data } = await api.get(`/campaign/${campaign._id}/dashboard`);
+      setPlayers(data.players);
+      toast.success("Fichas del grupo actualizadas.");
+    } catch {
+      toast.error("No se pudo actualizar el grupo.");
+    } finally {
+      setRefreshing(false);
     }
   };
   const add = (entities, isPlayer) => {
@@ -179,7 +214,7 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
           <button
             className="button primary compact"
             disabled={!dirty || saving}
-            onClick={save}
+            onClick={() => save()}
           >
             {saving ? "Guardando…" : "Guardar mesa"}
           </button>
@@ -207,6 +242,17 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
         ))}
       </nav>
       <fieldset className="dm-tool-content" disabled={saving}>
+        {tab === "presentation" && (
+          <PresentationPanel
+            workspace={workspace}
+            players={players}
+            onChange={change}
+            onPublish={publish}
+            onDelete={ask}
+            onRefreshPlayers={refreshPlayers}
+            refreshing={refreshing}
+          />
+        )}
         {tab === "combat" && (
           <CombatPanel
             workspace={workspace}
@@ -227,20 +273,7 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
               <button
                 className="button secondary compact"
                 disabled={refreshing}
-                onClick={async () => {
-                  setRefreshing(true);
-                  try {
-                    const { data } = await api.get(
-                      `/campaign/${campaign._id}/dashboard`,
-                    );
-                    setPlayers(data.players);
-                    toast.success("Fichas del grupo actualizadas.");
-                  } catch {
-                    toast.error("No se pudo actualizar el grupo.");
-                  } finally {
-                    setRefreshing(false);
-                  }
-                }}
+                onClick={refreshPlayers}
               >
                 {refreshing ? "Actualizando…" : "Actualizar fichas"}
               </button>

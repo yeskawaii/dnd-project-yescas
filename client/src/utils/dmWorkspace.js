@@ -1,4 +1,5 @@
 import { calculateMod } from "./conversions.js";
+import { emptyPresentation } from "./tablePresentation.js";
 
 export const kindLabels = {
   player: "Jugador",
@@ -14,6 +15,7 @@ export const noteLabels = {
 };
 export const newId = () => crypto.randomUUID();
 export const emptyWorkspace = () => ({
+  presentation: emptyPresentation(),
   actors: [],
   combat: { name: "Nuevo encuentro", round: 1, activeId: "", combatants: [] },
   notes: [],
@@ -53,6 +55,7 @@ export function makeCombatant(entity, isPlayer, existing, id = newId()) {
       : entity.initiativeBonus,
     initiative: 0,
     conditions: "",
+    visibleToPlayers: isPlayer,
     actions: isPlayer ? "" : entity.actions,
     description: isPlayer
       ? `${entity.class} · Nivel ${entity.level}`

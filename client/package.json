@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "test": "node --test src/utils/*.test.js",
+    "test:views": "node --test test/*.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

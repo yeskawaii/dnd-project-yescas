@@ -3,12 +3,13 @@ import mongoose from "mongoose";
 import Campaign from "../models/Campaign.js";
 import Character from "../models/Character.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { playerTable } from "../utils/sharedTable.js";
 
 const router = express.Router();
 
 router.get("/", protect, async (req, res) => {
   try {
-    const characters = await Character.find({ user: req.user._id }).populate(
+    const characters = await Character.find({ user: req.user._id || req.user }).populate(
       "campaign",
       "name",
     );
@@ -124,6 +125,27 @@ router.get("/:id/dashboard", protect, async (req, res) => {
   }
 });
 
+// Every poll rechecks both ownership and current campaign membership.
+router.get("/:id/table", protect, async (req, res) => {
+  res.set("Cache-Control", "private, no-store");
+  try {
+    const { characterId } = req.query;
+    if (!mongoose.isValidObjectId(req.params.id) ||
+        typeof characterId !== "string" || !mongoose.isValidObjectId(characterId)) {
+      return res.status(400).json({ message: "Mesa o personaje inválido" });
+    }
+    const member = await Character.findOne({
+      _id: characterId, user: req.user._id || req.user, campaign: req.params.id,
+    }).select("_id");
+    if (!member) return res.status(403).json({ message: "Este personaje no tiene acceso a la contienda." });
+    const campaign = await Campaign.findById(req.params.id);
+    if (!campaign) return res.status(404).json({ message: "Contienda no encontrada" });
+    res.json(playerTable(campaign, characterId));
+  } catch {
+    res.status(500).json({ message: "No se pudo actualizar la mesa compartida." });
+  }
+});
+
 // Solo el DM puede leer (dashboard) y guardar su mesa, incluyendo los secretos.
 router.put("/:id/workspace", protect, async (req, res) => {
   try {
@@ -152,9 +174,29 @@ router.put("/:id/workspace", protect, async (req, res) => {
       name: campaign.name,
       dm,
       inviteCode: campaign.inviteCode,
-      dmWorkspace: workspace,
+      dmWorkspace: {
+        ...workspace,
+        // Cached older clients must not erase newly introduced scenes and messages.
+        ...(workspace.presentation === undefined && campaign.dmWorkspace?.presentation
+          ? { presentation: campaign.dmWorkspace.presentation.toObject() } : {}),
+      },
     });
     await candidate.validate();
+    // Validate new deliveries without making departed recipients block unrelated saves.
+    const previous = new Map((campaign.dmWorkspace?.presentation?.secrets || [])
+      .map((secret) => [secret.id, secret]));
+    const recipients = [...new Set(candidate.dmWorkspace.presentation.secrets
+      .filter((secret) => {
+        const old = previous.get(secret.id);
+        return !old || old.recipientId !== secret.recipientId ||
+          (!old.released && secret.released) || old.content !== secret.content;
+      }).map((secret) => secret.recipientId))];
+    if (recipients.length) {
+      const members = await Character.find({ campaign: campaign._id, _id: { $in: recipients } }).select("_id");
+      const memberIds = new Set(members.map((member) => String(member._id)));
+      if (recipients.some((recipient) => !memberIds.has(recipient)))
+        return res.status(400).json({ message: "El destinatario del secreto ya no pertenece a esta contienda. Actualiza el grupo." });
+    }
     const filter = { _id: campaign._id, dm };
     if (revision === 0)
       filter.$or = [

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { tablePresentationSchema } from "./TablePresentation.js";
 
 const text = (maxlength, extra = {}) => ({ type: String, maxlength, ...extra });
 const integer = (min, max, extra = {}) => ({
@@ -40,6 +41,7 @@ const combatant = new mongoose.Schema(
     sourceId: text(80),
     initiative: integer(-100, 200, { default: 0 }),
     conditions: text(500, { default: "" }),
+    visibleToPlayers: { type: Boolean, default: false },
   },
   options,
 );
@@ -90,6 +92,7 @@ const limited = (schema, max) => ({
 
 export const dmWorkspaceSchema = new mongoose.Schema(
   {
+    presentation: { type: tablePresentationSchema, default: () => ({}), required: true },
     actors: limited(actor, 200),
     combat: {
       type: new mongoose.Schema(

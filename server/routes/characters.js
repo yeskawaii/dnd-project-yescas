@@ -66,6 +66,18 @@ router.delete('/:charId', async (req, res) => {
 router.patch('/:charId/update', async (req, res) => {
   try {
     const updates = req.body;
+    const editable = new Set([
+      'name', 'class', 'level', 'race', 'deity', 'alignment', 'size', 'experience',
+      'physicalWeight', 'height', 'baseAttack', 'speed', 'initiativeMisc', 'quickActions',
+      'traits', 'attacks', 'money', 'saves', 'armorClass', 'hp', 'feats', 'stats',
+      'skills', 'weight', 'inventory', 'spells', 'notes',
+    ]);
+    if (!updates || typeof updates !== 'object' || Array.isArray(updates) ||
+        Object.keys(updates).some(key => !editable.has(key.split('.')[0]) ||
+          key.split('.').some(part => !part || part.startsWith('$') ||
+            ['__proto__', 'constructor', 'prototype'].includes(part)))) {
+      return res.status(400).json({ error: "Hay campos que no se pueden modificar desde la ficha" });
+    }
     
     const updatedChar = await Character.findOneAndUpdate(
       { _id: req.params.charId, user: req.user },
@@ -172,7 +184,8 @@ router.delete('/:charId/spells/:spellId', async (req, res) => {
 router.post('/:charId/notes', async (req, res) => {
   try {
     const { title, content, color } = req.body;
-    const char = await Character.findById(req.params.charId);
+    const char = await Character.findOne({ _id: req.params.charId, user: req.user });
+    if (!char) return res.status(404).json({ error: "No se encontró el personaje" });
     char.notes.push({ title, content, color: color || 'cyan' });
     await char.save();
     res.json(char.notes[char.notes.length - 1]);
@@ -183,7 +196,8 @@ router.post('/:charId/notes', async (req, res) => {
 
 router.delete('/:charId/notes/:noteId', async (req, res) => {
   try {
-    const char = await Character.findById(req.params.charId);
+    const char = await Character.findOne({ _id: req.params.charId, user: req.user });
+    if (!char) return res.status(404).json({ error: "No se encontró el personaje" });
     char.notes = char.notes.filter(n => n._id.toString() !== req.params.noteId);
     await char.save();
     res.json({ message: "Nota eliminada" });
@@ -195,7 +209,7 @@ router.delete('/:charId/notes/:noteId', async (req, res) => {
 // 🗡️ ARMAS Y ATAQUES
 router.post('/:charId/attacks', async (req, res) => {
   try {
-    const character = await Character.findById(req.params.charId);
+    const character = await Character.findOne({ _id: req.params.charId, user: req.user });
     if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
 
     character.attacks.push(req.body);
@@ -209,7 +223,7 @@ router.post('/:charId/attacks', async (req, res) => {
 
 router.delete('/:charId/attacks/:attackId', async (req, res) => {
   try {
-    const character = await Character.findById(req.params.charId);
+    const character = await Character.findOne({ _id: req.params.charId, user: req.user });
     if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
 
     character.attacks.pull(req.params.attackId);
@@ -223,7 +237,7 @@ router.delete('/:charId/attacks/:attackId', async (req, res) => {
 // 🌟 DOTES Y RASGOS
 router.post('/:charId/feats', async (req, res) => {
   try {
-    const character = await Character.findById(req.params.charId);
+    const character = await Character.findOne({ _id: req.params.charId, user: req.user });
     if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
 
     character.feats.push(req.body);
@@ -236,7 +250,7 @@ router.post('/:charId/feats', async (req, res) => {
 
 router.delete('/:charId/feats/:featId', async (req, res) => {
   try {
-    const character = await Character.findById(req.params.charId);
+    const character = await Character.findOne({ _id: req.params.charId, user: req.user });
     if (!character) return res.status(404).json({ message: 'Aventurero no encontrado' });
 
     character.feats.pull(req.params.featId);

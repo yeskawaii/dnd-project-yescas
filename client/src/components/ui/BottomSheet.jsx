@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { motion as Motion, useReducedMotion } from "framer-motion";
 import Icon from "./Icon";
 
-export default function BottomSheet({ title, subtitle, onClose, children }) {
+export default function BottomSheet({ title, subtitle, onClose, children, className = "" }) {
   const titleId = useId();
   const dialog = useRef(null);
   const reducedMotion = useReducedMotion();
@@ -63,7 +63,7 @@ export default function BottomSheet({ title, subtitle, onClose, children }) {
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="bottom-sheet"
+        className={`bottom-sheet ${className}`}
         initial={{ y: reducedMotion ? 0 : 60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.2 }}

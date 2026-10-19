@@ -302,6 +302,13 @@ export default function CombatPanel({
                 </button>
               </div>
             </div>
+            {focus.kind !== "player" && (
+              <label className="checkbox-field">
+                <input type="checkbox" checked={Boolean(focus.visibleToPlayers)}
+                  onChange={(event) => patchFocus({ visibleToPlayers: event.target.checked })} />
+                Revelar esta criatura en la mesa compartida
+              </label>
+            )}
             <label className="form-field">
               Estados y recordatorios
               <input

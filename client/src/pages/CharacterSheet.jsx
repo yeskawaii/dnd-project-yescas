@@ -11,9 +11,13 @@ import SpellsTab from "../components/character-sheet/SpellsTab";
 import NotesTab from "../components/character-sheet/NotesTab";
 import Icon from "../components/ui/Icon";
 import { actionKey } from "../utils/quickActions";
+import useSharedTable from "../hooks/useSharedTable";
+import PlayerTable from "../components/shared-table/PlayerTable";
+import "../components/shared-table/sharedTable.css";
 
 const tabs = [
   { id: "game", icon: "sword", label: "Partida" },
+  { id: "table", icon: "eye", label: "Mesa" },
   { id: "character", icon: "book", label: "Personaje" },
   { id: "inventory", icon: "bag", label: "Mochila" },
   { id: "journal", icon: "note", label: "Diario" },
@@ -38,6 +42,8 @@ export default function CharacterSheet({
   const pending = useRef(0);
   const scrollPositions = useRef({});
   const saving = saveState === "saving";
+  const campaignId = character.campaign?._id || character.campaign;
+  const table = useSharedTable(campaignId, character._id);
 
   useLayoutEffect(() => {
     window.scrollTo({
@@ -146,6 +152,14 @@ export default function CharacterSheet({
           </nav>
         )}
         <main>
+          {activeTab === "game" && campaignId && (
+            <button className="shared-table-teaser" onClick={() => navigate("table")}>
+              <span className="action-emblem tone-mint"><Icon name="eye" size={23} /></span>
+              <span><strong>{table.data?.scene?.title || "Tu grupo tiene una mesa compartida"}</strong>
+                <small>Escenas, turnos y mapa{table.data?.secrets.length ? ` · ${table.data.secrets.length} mensajes privados` : ""}</small></span>
+              <Icon name="chevron" size={20} />
+            </button>
+          )}
           <Motion.div
             key={`${activeTab}:${activeTab === "character" ? section : ""}`}
             initial={{ opacity: 0, y: 5 }}
@@ -153,6 +167,7 @@ export default function CharacterSheet({
             transition={{ duration: 0.12 }}
           >
             {activeTab === "game" && <GameTab {...shared} onBrowse={browse} />}
+            {activeTab === "table" && <PlayerTable key={`${campaignId}:${character._id}`} character={character} table={table} />}
             {activeTab === "character" && section === "stats" && (
               <StatsTab
                 {...shared}
