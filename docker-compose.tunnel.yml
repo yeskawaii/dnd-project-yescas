@@ -1,0 +1,13 @@
+services:
+  bag-frontend:
+    ports:
+      - "127.0.0.1:8085:80"
+    volumes:
+      - ./client/nginx.cloudflare.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+
+  bag-backend:
+    env_file:
+      - ./.env
+      - ./server/.env
+    restart: unless-stopped

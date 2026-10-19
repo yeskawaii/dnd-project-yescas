@@ -12,15 +12,20 @@ services:
     environment:
       - MONGO_URI=${MONGO_URI}
       - PORT=4001
-    # --- EL EXPLORADOR (HEALTHCHECK) ---
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4001/api/health"]
       interval: 10s
       timeout: 10s
       retries: 5
-      start_period: 30s # 30 segundos de gracia para que Node y Mongo conecten
+      start_period: 30s
     networks:
       - proxy-network
+    # ---> ¡AQUÍ LO METES! <---
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   bag-frontend:
     build:
@@ -30,12 +35,17 @@ services:
     restart: always
     expose:
       - "80"
-    # --- ESPERA AL BACKEND SANO ---
     depends_on:
       bag-backend:
         condition: service_healthy
     networks:
       - proxy-network
+    # ---> ¡AQUÍ TAMBIÉN! <---
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   proxy-network:
