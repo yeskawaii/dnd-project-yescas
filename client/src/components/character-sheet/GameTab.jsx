@@ -13,6 +13,7 @@ import {
   moveAction,
 } from "../../utils/quickActions";
 import { calculateMod } from "../../utils/conversions";
+import { getPlayLayout } from "../../utils/characterCustomization";
 
 function FavoriteTile({
   action,
@@ -111,6 +112,7 @@ export default function GameTab({
   const [selectedKey, setSelectedKey] = useState(null);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const layout = getPlayLayout(character);
   const actions = getActions(character);
   const actionMap = new Map(actions.map((action) => [action.key, action]));
   const favoriteKeys = (character.quickActions || [])
@@ -146,9 +148,9 @@ export default function GameTab({
     if (result) setOrganizing(false);
   };
 
-  return (
-    <div className="game-layout">
-      <div className="game-overview">
+  const widgets = {
+    vitals: (
+      <div className="vitals-widget">
         <HealthTracker
           currentHp={character.hp?.current}
           maxHp={character.hp?.max}
@@ -156,23 +158,6 @@ export default function GameTab({
           onEditMax={(max) => onUpdate({ "hp.max": max })}
           saving={saving}
         />
-        <div className="combat-summary">
-          <div>
-            <Icon name="shield" />
-            <strong>{ca}</strong>
-            <span>Armadura</span>
-          </div>
-          <div>
-            <Icon name="bolt" />
-            <strong>{bonus(dex + (character.initiativeMisc || 0))}</strong>
-            <span>Iniciativa</span>
-          </div>
-          <div>
-            <Icon name="sword" />
-            <strong>{bonus(character.baseAttack || 0)}</strong>
-            <span>Ataque base</span>
-          </div>
-        </div>
         <div className="session-note">
           <span className="status-dot" />
           <p>
@@ -181,20 +166,33 @@ export default function GameTab({
                 En contienda <strong>{character.campaign.name}</strong>
               </>
             ) : (
-              <>Tu ficha, lista para la siguiente aventura.</>
+              "Tu ficha, lista para la siguiente aventura."
             )}
           </p>
           <Icon name="dice" size={18} />
         </div>
-        <div className="desktop-hint">
-          <Icon name="star" size={28} />
-          <h3>Tu mesa, a tu manera.</h3>
-          <p>
-            Reúne tus recursos favoritos y ordénalos como prefieras. Menos
-            búsquedas, más aventura.
-          </p>
+      </div>
+    ),
+    defenses: (
+      <div className="combat-summary" aria-label="Defensa e iniciativa">
+        <div>
+          <Icon name="shield" />
+          <strong>{ca}</strong>
+          <span>Armadura</span>
+        </div>
+        <div>
+          <Icon name="bolt" />
+          <strong>{bonus(dex + (character.initiativeMisc || 0))}</strong>
+          <span>Iniciativa</span>
+        </div>
+        <div>
+          <Icon name="sword" />
+          <strong>{bonus(character.baseAttack || 0)}</strong>
+          <span>Ataque base</span>
         </div>
       </div>
+    ),
+    favorites: (
       <section className="quick-actions-section">
         <div className="section-heading">
           <div>
@@ -306,21 +304,33 @@ export default function GameTab({
             <Icon name="chevron" size={18} />
           </button>
         )}
-        {!organizing && (
-          <div className="browse-shortcuts">
-            <button onClick={() => onBrowse("spells")}>
-              <Icon name="magic" size={17} />
-              Ver hechizos
-              <Icon name="chevron" size={14} />
-            </button>
-            <button onClick={() => onBrowse("features")}>
-              <Icon name="skill" size={17} />
-              Ver habilidades
-              <Icon name="chevron" size={14} />
-            </button>
-          </div>
-        )}
       </section>
+    ),
+    shortcuts: (
+      <div className="browse-shortcuts personal-shortcuts">
+        <button onClick={() => onBrowse("spells")}>
+          <Icon name="magic" size={17} />
+          Ver hechizos
+          <Icon name="chevron" size={14} />
+        </button>
+        <button onClick={() => onBrowse("features")}>
+          <Icon name="skill" size={17} />
+          Ver habilidades
+          <Icon name="chevron" size={14} />
+        </button>
+      </div>
+    ),
+  };
+
+  return (
+    <div className={`personal-game-layout density-${layout.density}`}>
+      {layout.order
+        .filter((id) => !layout.hidden.includes(id))
+        .map((id) => (
+          <div key={id} className={`play-widget widget-${id}`} data-widget={id}>
+            {widgets[id]}
+          </div>
+        ))}
       {panel === "library" && (
         <BottomSheet
           title="Agrega tus favoritos"

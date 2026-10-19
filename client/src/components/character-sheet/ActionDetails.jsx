@@ -2,6 +2,7 @@ import { useState } from "react";
 import BottomSheet from "../ui/BottomSheet";
 import Icon from "../ui/Icon";
 import FavoriteButton from "../ui/FavoriteButton";
+import IconPicker from "../ui/IconPicker";
 import { actionKey, bonus, rollDice } from "../../utils/quickActions";
 import {
   calculateAttackTotal,
@@ -162,6 +163,37 @@ export default function ActionDetails({
           Consulta sus efectos y aplícalos en la ficha. Los objetos no se
           consumen automáticamente.
         </p>
+      )}
+      {onUpdate && (
+        <details className="resource-icon-details action-icon-customizer">
+          <summary>
+            <Icon name={action.icon} size={23} />
+            <span>
+              Icono de este recurso<small>Dale un símbolo propio</small>
+            </span>
+            <Icon name="chevron" size={16} />
+          </summary>
+          <IconPicker
+            value={item.visualIcon || ""}
+            allowDefault
+            disabled={saving}
+            onChange={(visualIcon) => {
+              const collection = {
+                attack: "attacks",
+                spell: "spells",
+                item: "inventory",
+                skill: "skills",
+              }[action.kind];
+              onUpdate({
+                [collection]: character[collection].map((entry) =>
+                  String(entry._id) === String(item._id)
+                    ? { ...entry, visualIcon }
+                    : entry,
+                ),
+              });
+            }}
+          />
+        </details>
       )}
       {(onEdit || onDelete) && (
         <div className="detail-footer">

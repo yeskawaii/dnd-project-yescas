@@ -40,6 +40,7 @@ export default function FeaturesTab({
           character={character}
           onUpdateSkill={(skills) => onUpdate({ skills })}
           onOpenAddModal={() => setEditor({ kind: "skill", item: null })}
+          onEditSkill={(item) => setEditor({ kind: "skill", item })}
           onToggleFavorite={onToggleFavorite}
           saving={saving}
         />

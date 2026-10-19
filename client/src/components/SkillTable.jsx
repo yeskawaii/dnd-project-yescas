@@ -3,11 +3,13 @@ import { calculateSkillTotal } from "../utils/conversions";
 import { actionKey, bonus } from "../utils/quickActions";
 import FavoriteButton from "./ui/FavoriteButton";
 import Icon from "./ui/Icon";
+import { resourceIcon } from "../utils/characterCustomization";
 
 export default function SkillTable({
   character,
   onUpdateSkill,
   onOpenAddModal,
+  onEditSkill,
   onToggleFavorite,
   saving,
 }) {
@@ -93,9 +95,16 @@ export default function SkillTable({
           };
           return (
             <div className="skill-row" key={skill._id}>
-              <span className="skill-score">
+              <button
+                type="button"
+                className="skill-score"
+                disabled={saving || hasChanges}
+                aria-label={`Editar ${skill.name}`}
+                onClick={() => onEditSkill?.(skill)}
+              >
+                <Icon name={resourceIcon(skill, "skill")} size={16} />
                 {bonus(calculateSkillTotal(skill, character.stats))}
-              </span>
+              </button>
               <div>
                 <strong>{skill.name}</strong>
                 <small>

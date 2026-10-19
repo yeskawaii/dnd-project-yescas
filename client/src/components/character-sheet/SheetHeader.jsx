@@ -1,6 +1,7 @@
 import EditableText from "../ui/EditableText";
 import EditableNumber from "../ui/EditableNumber";
 import Icon from "../ui/Icon";
+import CharacterAvatar from "../ui/CharacterAvatar";
 
 export default function SheetHeader({
   character,
@@ -8,6 +9,7 @@ export default function SheetHeader({
   onBack,
   logout,
   saveState = "saved",
+  onCustomize,
 }) {
   return (
     <header className="character-header">
@@ -20,9 +22,17 @@ export default function SheetHeader({
         >
           <Icon name="back" />
         </button>
-        <div className="character-avatar">
-          <Icon name="sword" size={23} />
-        </div>
+        <button
+          className="avatar-edit-button"
+          onClick={onCustomize}
+          disabled={saveState === "saving"}
+          aria-label="Personalizar mi personaje"
+        >
+          <CharacterAvatar character={character} />
+          <span className="avatar-edit-badge">
+            <Icon name="palette" size={11} />
+          </span>
+        </button>
         <div className="character-identity">
           <EditableText
             value={character.name}

@@ -4,6 +4,11 @@ import { toast } from "sonner";
 import JoinCampaignModal from "../components/JoinCampaignModal";
 import Icon from "../components/ui/Icon";
 import CreateCharacterModal from "../components/CreateCharacterModal";
+import CharacterAvatar from "../components/ui/CharacterAvatar";
+import {
+  appearanceStyle,
+  getAppearance,
+} from "../utils/characterCustomization";
 
 export default function CharacterSelect({
   characters,
@@ -31,7 +36,8 @@ export default function CharacterSelect({
       );
     } catch (error) {
       toast.error(
-        error.response?.data?.error || "No se pudo crear el personaje. Inténtalo de nuevo.",
+        error.response?.data?.error ||
+          "No se pudo crear el personaje. Inténtalo de nuevo.",
       );
     } finally {
       creationPending.current = false;
@@ -97,14 +103,16 @@ export default function CharacterSelect({
       </div>
       <div className="character-select-list">
         {characters.map((character) => (
-          <article className="character-select-card" key={character._id}>
+          <article
+            className="character-select-card personalized-character-card"
+            style={appearanceStyle(getAppearance(character))}
+            key={character._id}
+          >
             <button
               className="character-select-open"
               onClick={() => setSelectedChar(character)}
             >
-              <span className="character-avatar">
-                <Icon name="sword" size={24} />
-              </span>
+              <CharacterAvatar character={character} />
               <div>
                 <h2>{character.name}</h2>
                 <p>
@@ -133,7 +141,8 @@ export default function CharacterSelect({
           </span>
           <h3>Tu primera historia te espera.</h3>
           <p>
-            Elige un estilo de juego y empieza con tus atributos y equipo listos.
+            Elige un estilo de juego y empieza con tus atributos y equipo
+            listos.
           </p>
         </div>
       )}

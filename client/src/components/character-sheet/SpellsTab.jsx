@@ -93,7 +93,7 @@ export default function SpellsTab({
               onClick={() => setSelected(action.key)}
             >
               <span className="action-emblem tone-violet">
-                <Icon name="magic" size={24} />
+                <Icon name={action.icon} size={24} />
               </span>
               <span className="action-copy">
                 <span className="action-type">

@@ -1,4 +1,9 @@
 import mongoose from "mongoose";
+import {
+  appearanceSchema,
+  playLayoutSchema,
+  visualIcon,
+} from "./CharacterCustomization.js";
 
 export const defaultSkills = [
   { name: "Abrir Cerraduras", stat: "Destreza" },
@@ -45,6 +50,8 @@ const characterSchema = new mongoose.Schema(
 
     // BIOGRAFÍA
     name: { type: String, required: true },
+    appearance: { type: appearanceSchema, default: () => ({}), required: true },
+    playLayout: { type: playLayoutSchema, default: () => ({}), required: true },
     class: { type: String, default: "Guerrero" },
     level: { type: Number, default: 1 },
     race: { type: String, default: "Humano" },
@@ -62,15 +69,23 @@ const characterSchema = new mongoose.Schema(
 
     // Orden de los accesos rápidos de cada personaje, sincronizado entre dispositivos.
     quickActions: {
-      type: [{
-        _id: false,
-        kind: { type: String, enum: ['attack', 'spell', 'item', 'skill'], required: true },
-        itemId: { type: String, required: true },
-      }],
+      type: [
+        {
+          _id: false,
+          kind: {
+            type: String,
+            enum: ["attack", "spell", "item", "skill"],
+            required: true,
+          },
+          itemId: { type: String, required: true },
+        },
+      ],
       default: [],
       validate: {
-        validator: entries => new Set(entries.map(entry => `${entry.kind}:${entry.itemId}`)).size === entries.length,
-        message: 'Los accesos rápidos no pueden repetirse',
+        validator: (entries) =>
+          new Set(entries.map((entry) => `${entry.kind}:${entry.itemId}`))
+            .size === entries.length,
+        message: "Los accesos rápidos no pueden repetirse",
       },
     },
 
@@ -92,6 +107,7 @@ const characterSchema = new mongoose.Schema(
     attacks: [
       {
         name: { type: String, required: true }, // "Espada Larga de Hierro Frío"
+        visualIcon: visualIcon(),
         attackBonus: { type: Number, default: 0 }, // El +1 mágico o bonos extra
         damageDice: { type: String, default: "1d8" }, // "1d8", "2d6", etc.
         damageBonus: { type: Number, default: 0 }, // Daño mágico extra
@@ -152,6 +168,7 @@ const characterSchema = new mongoose.Schema(
       type: [
         {
           name: String,
+          visualIcon: visualIcon(),
           stat: String,
           ranks: { type: Number, default: 0 },
           miscModifier: { type: Number, default: 0 },
@@ -170,6 +187,7 @@ const characterSchema = new mongoose.Schema(
     inventory: [
       {
         name: String,
+        visualIcon: visualIcon(),
         weight: { type: Number, default: 0 },
         desc: String,
         icon: { type: String, default: "📦" },
@@ -179,6 +197,7 @@ const characterSchema = new mongoose.Schema(
     spells: [
       {
         name: String,
+        visualIcon: visualIcon(),
         level: Number,
         school: String,
         desc: String,

@@ -1,0 +1,19 @@
+# Tu personaje, tu estilo
+
+En **Partida → Mi estilo y mi partida**, o tocando el retrato de la cabecera, puedes personalizar cada personaje. Los cambios se guardan al pulsar **Guardar mi estilo** y se conservan en otros dispositivos.
+
+- **Mi personaje:** cinco paletas (Bosque, Arcano, Ascua, Marea y Luna), cuatro ambientes, tres marcos y 26 emblemas. Puedes elegir una imagen JPG, PNG o WebP de tu galería, ajustar el acercamiento y el encuadre, y confirmar con **Usar recorte**. Quitar la foto recupera el emblema.
+- **Mi partida:** ordena cuatro tarjetas con las flechas, oculta defensa o accesos y elige tamaño cómodo o compacto. Puntos de vida y acciones rápidas siempre permanecen disponibles.
+- **Iconos de recursos:** abre un favorito en Partida y despliega **Icono de este recurso**; el símbolo elegido se guarda inmediatamente. También puedes elegirlo al crear o editar un recurso. La opción **Auto** recupera su símbolo por defecto. Para editar una habilidad existente, toca su bono en la tabla de habilidades. Los iconos personalizados aparecen también en los favoritos.
+
+La vista previa no guarda cambios. Cerrar el panel los descarta. **Restablecer estilo y tarjetas** prepara los valores originales; todavía debes guardar para aplicarlos. Si falla el guardado, el panel mantiene los cambios para volver a intentarlo.
+
+## Datos
+
+`Character.appearance` guarda tema, ambiente, marco, emblema y retrato. `Character.playLayout` guarda orden, tarjetas ocultas y densidad. Los recursos guardan `visualIcon` por separado de la categoría de inventario `icon`; cambiar un símbolo no cambia su categoría ni sus favoritos.
+
+Los personajes anteriores reciben valores por defecto sin migración. El endpoint de actualización conserva el filtro de propietario y valida los nuevos campos. El retrato se recorta a 384 × 384 píxeles y se convierte a JPEG antes de enviarse. El servidor admite únicamente datos de imágenes JPEG, PNG o WebP, con un máximo de 240.000 caracteres; no admite SVG ni URLs externas para retratos. No se añade ningún servicio de almacenamiento externo.
+
+## Verificación
+
+En `server`, ejecuta `npm test`. En `client`, ejecuta `npm test`, `npm run test:views`, `npm run lint` y `npm run build`. Las pruebas cubren compatibilidad con fichas anteriores, validación, persistencia simulada, identidad de recursos, recortes y renderizado de tarjetas. La revisión interactiva se realiza con personajes ficticios en memoria, sin conectar MongoDB.

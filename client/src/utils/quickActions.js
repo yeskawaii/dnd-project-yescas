@@ -3,6 +3,7 @@ import {
   calculateDamageBonus,
   calculateSkillTotal,
 } from "./conversions.js";
+import { resourceIcon } from "./characterCustomization.js";
 
 export const actionTypes = {
   attack: {
@@ -42,6 +43,7 @@ export function getActions(character) {
         name: item.name,
         item,
         ...actionTypes[kind],
+        icon: resourceIcon(item, actionTypes[kind].icon),
       };
       if (kind === "attack") {
         action.value = bonus(calculateAttackTotal(item, character));

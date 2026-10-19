@@ -1,6 +1,7 @@
 import { useState } from "react";
 import BottomSheet from "../ui/BottomSheet";
 import Icon from "../ui/Icon";
+import IconPicker from "../ui/IconPicker";
 
 const schools = [
   "Abjuración",
@@ -104,6 +105,34 @@ export default function ResourceEditor({ kind, item, onClose, onSave }) {
       }}
     >
       <form className="resource-form" onSubmit={save}>
+        {["attack", "spell", "item", "skill"].includes(kind) && (
+          <details className="resource-icon-details">
+            <summary>
+              <Icon
+                name={
+                  data.visualIcon ||
+                  {
+                    attack: "sword",
+                    spell: "magic",
+                    item: "bag",
+                    skill: "skill",
+                  }[kind]
+                }
+                size={23}
+              />
+              <span>
+                Icono de este recurso<small>Toca para elegir uno</small>
+              </span>
+              <Icon name="chevron" size={16} />
+            </summary>
+            <IconPicker
+              value={data.visualIcon || ""}
+              onChange={(value) => set("visualIcon", value)}
+              allowDefault
+              disabled={pending}
+            />
+          </details>
+        )}
         {kind === "note"
           ? field("title", "Título", "text", {
               required: true,

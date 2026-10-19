@@ -67,7 +67,7 @@ router.patch('/:charId/update', async (req, res) => {
   try {
     const updates = req.body;
     const editable = new Set([
-      'name', 'class', 'level', 'race', 'deity', 'alignment', 'size', 'experience',
+      'name', 'appearance', 'playLayout', 'class', 'level', 'race', 'deity', 'alignment', 'size', 'experience',
       'physicalWeight', 'height', 'baseAttack', 'speed', 'initiativeMisc', 'quickActions',
       'traits', 'attacks', 'money', 'saves', 'armorClass', 'hp', 'feats', 'stats',
       'skills', 'weight', 'inventory', 'spells', 'notes',

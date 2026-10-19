@@ -152,8 +152,8 @@ export default function InventoryTab({
                 className="collection-open"
                 onClick={() => setSelected(action.key)}
               >
-                <span className="action-emblem tone-mint item-emoji">
-                  {action.item.icon || "📦"}
+                <span className="action-emblem tone-mint">
+                  <Icon name={action.icon} size={23} />
                 </span>
                 <span className="action-copy">
                   <strong>{action.name}</strong>
