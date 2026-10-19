@@ -19,14 +19,11 @@ export const calculateSkillTotal = (skill, stats) => {
   const statValue = stats?.[skill.stat] ?? 10;
   const mod = calculateMod(statValue);
 
-  // Bono de entrenamiento (+3 si es de clase y tiene al menos 1 rango)
-  const classBonus = skill.isClassSkill && skill.ranks > 0 ? 3 : 0;
-
+  // D&D 3.5: ser de clase afecta al coste y al máximo de rangos, no al bono.
   return (
     mod +
     (Number(skill.ranks) || 0) +
-    (Number(skill.miscModifier) || 0) +
-    classBonus
+    (Number(skill.miscModifier) || 0)
   );
 };
 

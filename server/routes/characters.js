@@ -1,10 +1,20 @@
 import express from 'express';
 import Character from '../models/Character.js';
 import { protect } from '../middleware/authMiddleware.js';
+import {
+  applyTemplateFavorites,
+  buildTemplateData,
+  getCharacterTemplate,
+  listCharacterTemplates,
+} from '../data/characterTemplates.js';
 
 const router = express.Router();
 
 router.use(protect);
+
+router.get('/templates', (req, res) => {
+  res.json(listCharacterTemplates());
+});
 
 // 1. GET: Obtener TODOS los personajes
 router.get('/', async (req, res) => {
@@ -17,15 +27,23 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 2. POST: Crear una ficha editable con los valores iniciales del modelo
+// 2. POST: Crear desde una plantilla del servidor o una ficha en blanco.
 router.post('/', async (req, res) => {
   try {
-    const { name, charClass } = req.body ?? {};
-    const newChar = await Character.create({
+    const { name, charClass, templateId } = req.body ?? {};
+    const template = templateId == null ? null : getCharacterTemplate(templateId);
+    if (templateId != null && !template) {
+      return res.status(400).json({ error: "La plantilla no existe. Vuelve a elegir un estilo de juego." });
+    }
+    const character = new Character({
+      ...(template ? buildTemplateData(template) : {}),
       user: req.user,
-      name: typeof name === "string" && name.trim() ? name.trim() : "Nuevo Aventurero",
-      class: typeof charClass === "string" && charClass.trim() ? charClass.trim() : "Guerrero",
+      name: typeof name === "string" && name.trim() ? name.trim() : template ? `${template.name} aventurero` : "Nuevo Aventurero",
+      class: template ? template.name : typeof charClass === "string" && charClass.trim() ? charClass.trim() : "Guerrero",
     });
+    // Los subdocumentos ya tienen IDs antes de guardar; los favoritos se persisten juntos.
+    if (template) applyTemplateFavorites(character, template);
+    const newChar = await Character.create(character);
     res.status(201).json(newChar);
   } catch (err) {
     console.error(err);

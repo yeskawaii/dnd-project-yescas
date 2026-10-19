@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { actionKey, getActions, moveAction, rollDice } from "./quickActions.js";
-import { calculateMod } from "./conversions.js";
+import { calculateMod, calculateSkillTotal } from "./conversions.js";
 
 test("reordering supports drag and arrow positions without mutating saved preferences", () => {
   const saved = ["attack:1", "spell:2", "item:3"];
@@ -71,4 +71,16 @@ test("new or legacy sheets with missing collections remain usable and zero attri
   assert.deepEqual(getActions({}), []);
   assert.equal(calculateMod(0), -5);
   assert.equal(calculateMod(undefined), 0);
+});
+
+test("D&D 3.5 trained skills use ranks, ability and other modifiers without a Pathfinder +3", () => {
+  const character = {
+    stats: { Destreza: 15, Fuerza: 15 },
+    skills: [{ _id: "hide", name: "Esconderse", stat: "Destreza", ranks: 4, isClassSkill: true }],
+  };
+  assert.equal(calculateSkillTotal(character.skills[0], character.stats), 6);
+  assert.equal(getActions(character)[0].value, "+6");
+  assert.equal(calculateSkillTotal({ stat: "Fuerza", ranks: 4, miscModifier: -4, isClassSkill: true }, character.stats), 2);
+  assert.equal(calculateSkillTotal({ stat: "Destreza", ranks: 0, isClassSkill: true }, character.stats), 2);
+  assert.equal(calculateSkillTotal({ stat: "Destreza", ranks: 1.5, isClassSkill: false }, character.stats), 3.5);
 });

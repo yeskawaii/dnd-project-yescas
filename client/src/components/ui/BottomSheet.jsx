@@ -25,7 +25,7 @@ export default function BottomSheet({ title, subtitle, onClose, children }) {
       if (event.key !== "Tab") return;
       const elements = [
         ...dialog.current.querySelectorAll(
-          'button:not(:disabled), input, select, textarea, [tabindex="0"]',
+          'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], summary, [tabindex="0"]',
         ),
       ].filter((element) => element.getClientRects().length);
       const first = elements[0];

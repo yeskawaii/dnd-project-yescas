@@ -3,6 +3,7 @@ import api from "../api/axios";
 import { toast } from "sonner";
 import JoinCampaignModal from "../components/JoinCampaignModal";
 import Icon from "../components/ui/Icon";
+import CreateCharacterModal from "../components/CreateCharacterModal";
 
 export default function CharacterSelect({
   characters,
@@ -13,18 +14,25 @@ export default function CharacterSelect({
 }) {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreatorOpen, setIsCreatorOpen] = useState(false);
   const creationPending = useRef(false);
-  const create = async () => {
+  const create = async (options) => {
     if (creationPending.current) return;
     creationPending.current = true;
     setIsCreating(true);
     try {
-      const { data } = await api.post("/character", {});
+      const { data } = await api.post("/character", options);
       setCharacters((previous) => [...previous, data]);
       setSelectedChar(data);
-      toast.success("Ficha lista. Personalízala en la pestaña Personaje.");
-    } catch {
-      toast.error("No se pudo crear el personaje. Inténtalo de nuevo.");
+      toast.success(
+        options.templateId
+          ? "¡Listo para jugar! Tienes una guía en tu Diario."
+          : "Ficha lista. Personalízala en la pestaña Personaje.",
+      );
+    } catch (error) {
+      toast.error(
+        error.response?.data?.error || "No se pudo crear el personaje. Inténtalo de nuevo.",
+      );
     } finally {
       creationPending.current = false;
       setIsCreating(false);
@@ -125,14 +133,14 @@ export default function CharacterSelect({
           </span>
           <h3>Tu primera historia te espera.</h3>
           <p>
-            Crea una ficha y personaliza tu nombre, clase, atributos y equipo.
+            Elige un estilo de juego y empieza con tus atributos y equipo listos.
           </p>
         </div>
       )}
       <div className="selection-actions">
         <button
           className="button primary"
-          onClick={create}
+          onClick={() => setIsCreatorOpen(true)}
           disabled={isCreating}
           aria-busy={isCreating}
         >
@@ -149,8 +157,15 @@ export default function CharacterSelect({
         </button>
       </div>
       <p className="selection-hint">
-        Una ficha lista para editar. Una mesa lista para jugar.
+        No necesitas conocer las reglas para crear tu primer personaje.
       </p>
+      {isCreatorOpen && (
+        <CreateCharacterModal
+          onClose={() => setIsCreatorOpen(false)}
+          onCreate={create}
+          creating={isCreating}
+        />
+      )}
       {isJoinModalOpen && (
         <JoinCampaignModal
           isOpen

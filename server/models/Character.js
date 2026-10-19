@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const defaultSkills = [
+export const defaultSkills = [
   { name: "Abrir Cerraduras", stat: "Destreza" },
   { name: "Acrobacias", stat: "Destreza" },
   { name: "Artesanía", stat: "Inteligencia" },
