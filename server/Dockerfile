@@ -2,17 +2,18 @@
 FROM node:20-slim
 
 # Directorio de trabajo
-WORKDIR /app
+WORKDIR /app/server
 
 # INSTALAMOS CURL (Vital para el Healthcheck)
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Copiamos solo los archivos de dependencias
-COPY package*.json ./
+COPY server/package*.json ./
 RUN npm install
 
 # Copiamos el resto del código
-COPY . .
+COPY server/ .
+COPY shared/ /app/shared/
 
 # Exponemos el puerto 4001 (el que configuramos en index.js)
 EXPOSE 4001

@@ -2,6 +2,7 @@ import {
   calculateAttackTotal,
   calculateDamageBonus,
   calculateSkillTotal,
+  canUseSkill,
 } from "./conversions.js";
 import { resourceIcon } from "./characterCustomization.js";
 
@@ -55,8 +56,9 @@ export function getActions(character) {
         action.value = item.icon || "bag";
         action.caption = item.desc || "Consultar objeto";
       } else {
-        action.value = bonus(calculateSkillTotal(item, character.stats || {}));
-        action.caption = item.stat || "Habilidad";
+        action.usable = canUseSkill(item);
+        action.value = action.usable ? bonus(calculateSkillTotal(item, character)) : "Sin entrenar";
+        action.caption = action.usable ? item.stat || "Habilidad" : "Requiere al menos 1 rango";
       }
       return { ...action, key: actionKey(action) };
     }),

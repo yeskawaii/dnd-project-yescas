@@ -5,7 +5,7 @@ import FavoriteButton from "../ui/FavoriteButton";
 import DeleteSheet from "../ui/DeleteSheet";
 import ResourceEditor from "./ResourceEditor";
 import ActionDetails from "./ActionDetails";
-import { lbToKg } from "../../utils/conversions";
+import { lbToKg, equipInventory } from "../../utils/conversions";
 import { actionKey, getActions } from "../../utils/quickActions";
 
 export default function InventoryTab({
@@ -156,7 +156,7 @@ export default function InventoryTab({
                   <Icon name={action.icon} size={23} />
                 </span>
                 <span className="action-copy">
-                  <strong>{action.name}</strong>
+                  <strong>{action.name}{action.item.equipped ? " · Equipado" : ""}</strong>
                   <small>
                     {unitSystem === "imp"
                       ? `${action.item.weight || 0} lb`
@@ -216,11 +216,11 @@ export default function InventoryTab({
           onClose={() => setEditor(null)}
           onSave={(data) =>
             onUpdate({
-              inventory: editor.item
+              inventory: equipInventory(editor.item
                 ? character.inventory.map((item) =>
                     item._id === data._id ? data : item,
                   )
-                : [...(character.inventory || []), data],
+                : [...(character.inventory || []), data], data._id, data.equipped),
             })
           }
         />

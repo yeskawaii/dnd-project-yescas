@@ -7,6 +7,8 @@ import { createServer } from "vite";
 let vite;
 let GameTab;
 let CharacterAvatar;
+let StatsTab;
+let ModifierEditor;
 const noop = () => {};
 before(async () => {
   vite = await createServer({
@@ -19,6 +21,8 @@ before(async () => {
   CharacterAvatar = (
     await vite.ssrLoadModule("/src/components/ui/CharacterAvatar.jsx")
   ).default;
+  StatsTab = (await vite.ssrLoadModule("/src/components/character-sheet/StatsTab.jsx")).default;
+  ModifierEditor = (await vite.ssrLoadModule("/src/components/character-sheet/ModifierEditor.jsx")).default;
 });
 after(async () => {
   await vite?.close();
@@ -71,4 +75,19 @@ test("avatars use the saved theme and frame and discard unsafe image URLs", () =
   assert.ok(html.includes("#d7b9fb"));
   assert.ok(!html.includes("javascript:"));
   assert.ok(!html.includes("<img"));
+});
+
+test("stats distinguish manual AC bonuses, calculated saves and the independent combat totals", () => {
+  const html = renderToStaticMarkup(createElement(StatsTab, {
+    character: { stats: { Destreza: 22, Constitución: 14 }, armorClass: { armor: 4, shield: 2, maxDex: 4 }, saves: { mode: "calculated", fort: 2 }, initiativeMisc: 4, baseAttack: 1 },
+    onUpdate: noop, onToggleFavorite: noop, setUnitSystem: noop, unitSystem: "imp",
+  }));
+  for (const text of ["CA total", "Bono manual de armadura", "Iniciativa y ataque", "CA de toque", "Desprevenido", "Máximo de Destreza a CA", "Recalcular salvaciones al cambiar atributos", "Efectos y bonos temporales", "Fortaleza"]) assert.ok(html.includes(text), text);
+  assert.match(html, /<strong>20<\/strong>/);
+  assert.match(html, /<strong>\+10<\/strong>/);
+});
+
+test("modifier editors distinguish the source bonus type and explicit attack/skill scopes", () => {
+  const html = renderToStaticMarkup(createElement(ModifierEditor, { value: [{ target: "skill", value: 2, skillName: "Avistar", bonusType: "competence" }, { target: "attack", value: 1, attackName: "Espada", bonusType: "untyped" }], onChange: noop }));
+  for (const text of ["Modificadores vinculados", "Tipo de bono", "Avistar", "Espada", "Agregar modificador"]) assert.ok(html.includes(text), text);
 });

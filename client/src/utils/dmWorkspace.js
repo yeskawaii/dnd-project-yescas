@@ -1,4 +1,5 @@
-import { calculateMod } from "./conversions.js";
+import { armorClass, initiativeBonus, compareInitiative } from "./conversions.js";
+export { armorClass, initiativeBonus } from "./conversions.js";
 import { emptyPresentation } from "./tablePresentation.js";
 
 export const kindLabels = {
@@ -27,17 +28,8 @@ export const emptyWorkspace = () => ({
     tokens: [],
   },
 });
-export const armorClass = (player) =>
-  10 +
-  calculateMod(player.stats?.Destreza) +
-  Object.values(player.armorClass || {}).reduce(
-    (sum, value) => sum + (Number(value) || 0),
-    0,
-  );
-export const initiativeBonus = (player) =>
-  calculateMod(player.stats?.Destreza) + (player.initiativeMisc || 0);
 export const orderedCombatants = (combat) =>
-  [...combat.combatants].sort((a, b) => b.initiative - a.initiative);
+  [...combat.combatants].sort(compareInitiative);
 export function makeCombatant(entity, isPlayer, existing, id = newId()) {
   const count = existing.filter(
     (entry) => entry.sourceId === (entity._id || entity.id),
@@ -54,6 +46,7 @@ export function makeCombatant(entity, isPlayer, existing, id = newId()) {
       ? initiativeBonus(entity)
       : entity.initiativeBonus,
     initiative: 0,
+    tieBreaker: 0,
     conditions: "",
     visibleToPlayers: isPlayer,
     actions: isPlayer ? "" : entity.actions,

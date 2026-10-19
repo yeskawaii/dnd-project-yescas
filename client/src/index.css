@@ -3044,6 +3044,7 @@ button {
 }
 .dm-roster-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 5px;
   border: 1px solid transparent;
@@ -3509,3 +3510,15 @@ button {
     width: 115px;
   }
 }
+/* Rule explanations and source-linked effects. */
+.rule-breakdown { margin: 12px 0; padding: 14px; border: 1px solid var(--border, #ffffff24); border-radius: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+.rule-breakdown summary { cursor: pointer; font-weight: 600; }
+.rule-breakdown p { margin: 10px 0; }
+.modifier-editor { min-width: 0; padding: 12px; border: 1px solid var(--border, #ffffff24); border-radius: 12px; }
+.modifier-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 14px 0; border-bottom: 1px solid #ffffff20; margin-bottom: 12px; }
+.modifier-row input, .modifier-row select { width: 100%; min-width: 0; }
+.effect-row { padding: 14px 0; border-bottom: 1px solid #ffffff20; }
+.effect-row small { display: block; margin: 8px 0; overflow-wrap: anywhere; }
+.dm-tie-breaker { flex-basis: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; padding: 6px 12px; }
+.dm-tie-breaker input { max-width: 90px; }
+@media (max-width: 420px) { .modifier-row { grid-template-columns: minmax(0, 1fr); } }

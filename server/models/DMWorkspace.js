@@ -40,6 +40,7 @@ const combatant = new mongoose.Schema(
     },
     sourceId: text(80),
     initiative: integer(-100, 200, { default: 0 }),
+    tieBreaker: integer(0, 999999, { default: 0 }),
     conditions: text(500, { default: "" }),
     visibleToPlayers: { type: Boolean, default: false },
   },

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Icon from "../ui/Icon";
 import EntityDetails from "./EntityDetails";
+import { initiativeTies, resolveInitiativeTies } from "../../utils/conversions";
 import {
   advanceTurn,
   kindLabels,
@@ -18,6 +19,7 @@ export default function CombatPanel({
 }) {
   const combat = workspace.combat;
   const ordered = orderedCombatants(combat);
+  const tied = initiativeTies(combat.combatants);
   const [selected, setSelected] = useState("");
   const [amount, setAmount] = useState(1);
   const focus =
@@ -144,6 +146,7 @@ export default function CombatPanel({
                 patchCombat({
                   combatants: combat.combatants.map((entry) => ({
                     ...entry,
+                    tieBreaker: 0,
                     initiative:
                       Math.floor(Math.random() * 20) +
                       1 +
@@ -160,6 +163,10 @@ export default function CombatPanel({
           Tirar iniciativa
         </button>
       </div>
+      {tied.length > 0 && <div className="rule-breakdown" role="status">
+        <p>Hay {tied.length} participantes empatados en total y bono de iniciativa. Sortea su orden o registra el desempate acordado con la mesa.</p>
+        <button className="button secondary compact" onClick={() => patchCombat({ combatants: resolveInitiativeTies(combat.combatants) })}>Sortear desempates</button>
+      </div>}
       <p className="helper-text">
         La iniciativa es el total, incluido el bono. La vida y los estados se
         registran solo en este encuentro; las fichas originales de los jugadores
@@ -202,6 +209,7 @@ export default function CombatPanel({
                   min={-100}
                   max={200}
                   aria-label={`Iniciativa total de ${entry.name}`}
+                  title={`Bono de iniciativa ${entry.initiativeBonus >= 0 ? "+" : ""}${entry.initiativeBonus}`}
                   value={entry.initiative}
                   onChange={(event) =>
                     patchCombat({
@@ -222,6 +230,9 @@ export default function CombatPanel({
                     })
                   }
                 />
+                {ordered.some((other) => other.id !== entry.id && other.initiative === entry.initiative && other.initiativeBonus === entry.initiativeBonus) && <label className="dm-tie-breaker">Desempate (mayor primero)
+                  <input type="number" min={0} max={999999} value={entry.tieBreaker || 0} aria-label={`Desempate de ${entry.name}`} onChange={(event) => patchCombat({ combatants: combat.combatants.map((item) => item.id === entry.id ? { ...item, tieBreaker: Math.max(0, Math.min(999999, Math.trunc(Number(event.target.value) || 0))) } : item) })} />
+                </label>}
               </div>
             ))}
           </aside>

@@ -3,6 +3,7 @@ import test from "node:test";
 import Character from "../models/Character.js";
 import router from "../routes/characters.js";
 import { getCharacterTemplate, listCharacterTemplates } from "../data/characterTemplates.js";
+import { armorClass, calculateSaveTotal, skillBreakdown } from "../../shared/characterRules.mjs";
 
 const owner = "507f1f77bcf86cd799439011";
 const otherUser = "507f1f77bcf86cd799439022";
@@ -42,10 +43,10 @@ test("catalog previews agree with the persisted level-one builds and all favorit
     assert.deepEqual(character.stats.toObject(), preview.stats);
     assert.equal(character.hp.max, rules.hp);
     assert.equal(character.hp.current, preview.hp);
-    const armor = 10 + Math.floor((character.stats.Destreza - 10) / 2) + character.armorClass.armor + character.armorClass.shield;
+    const armor = armorClass(character);
     assert.equal(armor, rules.ca);
     assert.equal(armor, preview.armorClass);
-    assert.deepEqual([character.saves.fort, character.saves.ref, character.saves.will], rules.saves);
+    assert.deepEqual(["fort", "ref", "will"].map((key) => calculateSaveTotal(character, key)), rules.saves);
     assert.equal(character.feats.length, rules.feats);
     assert.equal(character.skills.reduce((sum, skill) => sum + skill.ranks, 0), rules.ranks);
     assert.ok(character.skills.every((skill) => !skill.ranks || (skill.isClassSkill && skill.ranks <= 4)));
@@ -101,10 +102,11 @@ test("armor penalties and feat bonuses are included without changing allocated r
   const res = response();
   await handler("post", "/")({ user: owner, body: { templateId: "fighter" } }, res);
   const skill = (name) => res.body.skills.find((entry) => entry.name === name);
-  assert.equal(skill("Trepar").miscModifier, -4);
-  assert.equal(skill("Nadar").miscModifier, -8);
-  assert.equal(skill("Montar").miscModifier, 0);
-  assert.equal(skill("Avistar").miscModifier, 2);
-  assert.equal(skill("Escuchar").miscModifier, 2);
+  assert.equal(skillBreakdown(skill("Trepar"), res.body).penalty, -4);
+  assert.equal(skillBreakdown(skill("Nadar"), res.body).penalty, -8);
+  assert.equal(skillBreakdown(skill("Montar"), res.body).penalty, 0);
+  assert.equal(skillBreakdown(skill("Avistar"), res.body).effects, 2);
+  assert.equal(skillBreakdown(skill("Escuchar"), res.body).effects, 2);
+  assert.equal(skill("Trepar").miscModifier, 0);
   assert.equal(skill("Trepar").ranks, 4);
 });

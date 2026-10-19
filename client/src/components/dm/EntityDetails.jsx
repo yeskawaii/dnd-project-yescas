@@ -3,6 +3,9 @@ import {
   calculateDamageBonus,
   calculateMod,
   calculateSkillTotal,
+  calculateSaveTotal,
+  canUseSkill,
+  armorBreakdown,
 } from "../../utils/conversions";
 import { bonus } from "../../utils/quickActions";
 import { armorClass, initiativeBonus } from "../../utils/dmWorkspace";
@@ -34,6 +37,7 @@ export default function EntityDetails({ entity, player = false }) {
       </div>
       {player ? (
         <>
+          <p>CA de toque {armorBreakdown(entity).touch} · Desprevenido {armorBreakdown(entity).flatFooted}</p>
           <div className="dm-attributes">
             {Object.entries(entity.stats || {}).map(([name, value]) => (
               <div key={name}>
@@ -46,7 +50,7 @@ export default function EntityDetails({ entity, player = false }) {
           </div>
           <div
             className="dm-stat-strip"
-            title="Valores registrados en la ficha"
+            title="Salvaciones calculadas según el modo de la ficha"
           >
             {[
               ["fort", "Fortaleza"],
@@ -54,7 +58,7 @@ export default function EntityDetails({ entity, player = false }) {
               ["will", "Voluntad"],
             ].map(([key, label]) => (
               <span key={key}>
-                {label} <strong>{bonus(entity.saves?.[key] || 0)}</strong>
+                {label} <strong>{bonus(calculateSaveTotal(entity, key))}</strong>
               </span>
             ))}
           </div>
@@ -104,7 +108,7 @@ export default function EntityDetails({ entity, player = false }) {
               <p key={skill._id || skill.name}>
                 {skill.name}{" "}
                 <strong>
-                  {bonus(calculateSkillTotal(skill, entity.stats))}
+                  {canUseSkill(skill) ? bonus(calculateSkillTotal(skill, entity)) : "Requiere entrenamiento"}
                 </strong>
               </p>
             ))}

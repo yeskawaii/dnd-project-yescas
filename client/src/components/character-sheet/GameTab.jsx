@@ -8,11 +8,10 @@ import ActionDetails from "./ActionDetails";
 import {
   actionKey,
   actionTypes,
-  bonus,
   getActions,
   moveAction,
 } from "../../utils/quickActions";
-import { calculateMod } from "../../utils/conversions";
+import CombatStats from "./CombatStats";
 import { getPlayLayout } from "../../utils/characterCustomization";
 
 function FavoriteTile({
@@ -122,15 +121,6 @@ export default function GameTab({
     ? order.filter((key) => actionMap.has(key))
     : favoriteKeys;
   const selected = actionMap.get(selectedKey);
-  const dex = calculateMod(character.stats?.Destreza);
-  const armor = character.armorClass || {};
-  const ca =
-    10 +
-    dex +
-    (armor.armor || 0) +
-    (armor.shield || 0) +
-    (armor.natural || 0) +
-    (armor.misc || 0);
   const filtered = actions.filter(
     (action) =>
       (filter === "all" || action.kind === filter) &&
@@ -173,25 +163,7 @@ export default function GameTab({
         </div>
       </div>
     ),
-    defenses: (
-      <div className="combat-summary" aria-label="Defensa e iniciativa">
-        <div>
-          <Icon name="shield" />
-          <strong>{ca}</strong>
-          <span>Armadura</span>
-        </div>
-        <div>
-          <Icon name="bolt" />
-          <strong>{bonus(dex + (character.initiativeMisc || 0))}</strong>
-          <span>Iniciativa</span>
-        </div>
-        <div>
-          <Icon name="sword" />
-          <strong>{bonus(character.baseAttack || 0)}</strong>
-          <span>Ataque base</span>
-        </div>
-      </div>
-    ),
+    defenses: <CombatStats character={character} />,
     favorites: (
       <section className="quick-actions-section">
         <div className="section-heading">

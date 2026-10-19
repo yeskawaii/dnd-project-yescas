@@ -82,5 +82,5 @@ test("D&D 3.5 trained skills use ranks, ability and other modifiers without a Pa
   assert.equal(getActions(character)[0].value, "+6");
   assert.equal(calculateSkillTotal({ stat: "Fuerza", ranks: 4, miscModifier: -4, isClassSkill: true }, character.stats), 2);
   assert.equal(calculateSkillTotal({ stat: "Destreza", ranks: 0, isClassSkill: true }, character.stats), 2);
-  assert.equal(calculateSkillTotal({ stat: "Destreza", ranks: 1.5, isClassSkill: false }, character.stats), 3.5);
+  assert.equal(calculateSkillTotal({ stat: "Destreza", ranks: 1.5, isClassSkill: false }, character.stats), 3);
 });

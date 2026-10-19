@@ -1,6 +1,7 @@
 import express from 'express';
 import Character from '../models/Character.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { proposeLegacyRulesUpgrade } from '../utils/legacyRules.js';
 import {
   applyTemplateFavorites,
   buildTemplateData,
@@ -14,6 +15,16 @@ router.use(protect);
 
 router.get('/templates', (req, res) => {
   res.json(listCharacterTemplates());
+});
+
+router.get('/:charId/rules-upgrade', async (req, res) => {
+  try {
+    const character = await Character.findOne({ _id: req.params.charId, user: req.user });
+    if (!character) return res.status(404).json({ error: "No se encontró el personaje" });
+    res.json(proposeLegacyRulesUpgrade(character));
+  } catch {
+    res.status(400).json({ error: "No se pudo preparar la vinculación" });
+  }
 });
 
 // 1. GET: Obtener TODOS los personajes
@@ -36,7 +47,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: "La plantilla no existe. Vuelve a elegir un estilo de juego." });
     }
     const character = new Character({
-      ...(template ? buildTemplateData(template) : {}),
+      ...(template ? buildTemplateData(template) : { saves: { mode: "calculated" } }),
       user: req.user,
       name: typeof name === "string" && name.trim() ? name.trim() : template ? `${template.name} aventurero` : "Nuevo Aventurero",
       class: template ? template.name : typeof charClass === "string" && charClass.trim() ? charClass.trim() : "Guerrero",
@@ -70,7 +81,7 @@ router.patch('/:charId/update', async (req, res) => {
       'name', 'appearance', 'playLayout', 'class', 'level', 'race', 'deity', 'alignment', 'size', 'experience',
       'physicalWeight', 'height', 'baseAttack', 'speed', 'initiativeMisc', 'quickActions',
       'traits', 'attacks', 'money', 'saves', 'armorClass', 'hp', 'feats', 'stats',
-      'skills', 'weight', 'inventory', 'spells', 'notes',
+      'skills', 'weight', 'inventory', 'spells', 'notes', 'effects',
     ]);
     if (!updates || typeof updates !== 'object' || Array.isArray(updates) ||
         Object.keys(updates).some(key => !editable.has(key.split('.')[0]) ||

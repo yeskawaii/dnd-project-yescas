@@ -6,7 +6,10 @@ import FavoriteButton from "../ui/FavoriteButton";
 import DeleteSheet from "../ui/DeleteSheet";
 import ResourceEditor from "./ResourceEditor";
 import ActionDetails from "./ActionDetails";
-import { calculateMod, lbToKg, inToCm } from "../../utils/conversions";
+import CombatStats from "./CombatStats";
+import EffectsPanel from "./EffectsPanel";
+import LegacyRulesPanel from "./LegacyRulesPanel";
+import { calculateMod, lbToKg, inToCm, sizeOptions, calculateSaveTotal, saveBreakdown, convertSavesMode, renameModifierReferences } from "../../utils/conversions";
 import { actionKey, bonus, getActions } from "../../utils/quickActions";
 
 export default function StatsTab({
@@ -48,6 +51,7 @@ export default function StatsTab({
   );
   return (
     <div className="sheet-stats">
+      <LegacyRulesPanel character={character} onUpdate={onUpdate} saving={saving} />
       <section className="surface">
         <div className="section-heading">
           <h2>Atributos</h2>
@@ -68,7 +72,7 @@ export default function StatsTab({
           ))}
         </div>
         <p className="stats-caption">
-          Toca un valor para editarlo. Sus bonos se calculan automáticamente.
+          Toca un valor para editarlo. Ataques, habilidades, CA e iniciativa se recalculan. Las salvaciones siguen el modo elegido abajo; vida máxima y ataque base se ajustan manualmente al subir de nivel.
         </p>
       </section>
       <section className="surface">
@@ -87,7 +91,10 @@ export default function StatsTab({
           {text("race", "Raza", character.race)}
           {text("alignment", "Alineamiento", character.alignment)}
           {text("deity", "Deidad", character.deity)}
-          {text("size", "Tamaño", character.size)}
+          <label className="bio-field">Tamaño<select value={character.size || "Mediano"} disabled={saving} onChange={(event) => onUpdate({ size: event.target.value })}>
+            {!sizeOptions.includes(character.size || "Mediano") && <option value={character.size}>{character.size}</option>}
+            {sizeOptions.map((size) => <option key={size}>{size}</option>)}
+          </select></label>
           {numeric("experience", "Experiencia", character.experience, {
             min: 0,
           })}
@@ -108,12 +115,14 @@ export default function StatsTab({
       </section>
       <section className="surface">
         <div className="section-heading">
-          <h2>Defensa y combate</h2>
+          <h2>Clase de armadura</h2>
           <Icon name="shield" size={18} />
         </div>
+        <CombatStats character={character} />
+        <p className="stats-caption">Ajustes manuales. El equipo equipado, las dotes y los efectos aportan sus propios bonos. Retira de estos ajustes cualquier bono que hayas vinculado a un recurso.</p>
         <div className="combat-edit-grid">
-          {numeric("armorClass.armor", "Armadura", character.armorClass?.armor)}
-          {numeric("armorClass.shield", "Escudo", character.armorClass?.shield)}
+          {numeric("armorClass.armor", "Bono manual de armadura", character.armorClass?.armor)}
+          {numeric("armorClass.shield", "Bono manual de escudo", character.armorClass?.shield)}
           {numeric(
             "armorClass.natural",
             "Armadura natural",
@@ -121,16 +130,29 @@ export default function StatsTab({
           )}
           {numeric(
             "armorClass.misc",
-            "Otros bonos de CA",
+            "Otros bonos manuales de CA",
             character.armorClass?.misc,
           )}
-          {numeric("baseAttack", "Ataque base", character.baseAttack)}
+          {numeric("armorClass.deflection", "Desvío manual", character.armorClass?.deflection)}
+          {numeric("armorClass.dodge", "Esquiva manual", character.armorClass?.dodge)}
+          {numeric("armorClass.checkPenalty", "Penalización manual a habilidades", character.armorClass?.checkPenalty, { min: -100, max: 0 })}
+          <div className="bio-field"><span>Límite manual de Destreza a CA</span>
+            <label className="checkbox-field"><input type="checkbox" disabled={saving} checked={character.armorClass?.maxDex != null} onChange={(event) => onUpdate({ "armorClass.maxDex": event.target.checked ? 0 : null })} />Aplicar límite</label>
+            {character.armorClass?.maxDex != null && <EditableNumber label="Máximo manual de Destreza" value={character.armorClass.maxDex} min={0} max={100} onSave={(value) => onUpdate({ "armorClass.maxDex": value })} />}
+          </div>
+        </div>
+      </section>
+      <section className="surface">
+        <h2>Iniciativa y ataque</h2>
+        <div className="combat-edit-grid">
+          {numeric("baseAttack", "Ataque base (BAB)", character.baseAttack)}
           {numeric(
             "initiativeMisc",
-            "Bono de iniciativa",
+            "Ajuste manual de iniciativa",
             character.initiativeMisc,
           )}
         </div>
+        <p className="stats-caption">Estos valores no se suman a la CA. El bono de iniciativa añade Destreza y efectos; el ataque base se añade a cada ataque.</p>
       </section>
       <section className="surface">
         <div className="section-heading">
@@ -138,15 +160,22 @@ export default function StatsTab({
           <Icon name="heart" size={18} />
         </div>
         <div className="combat-edit-grid">
-          {numeric("saves.fort", "Fortaleza", character.saves?.fort)}
-          {numeric("saves.ref", "Reflejos", character.saves?.ref)}
-          {numeric("saves.will", "Voluntad", character.saves?.will)}
+          {[["fort", "Fortaleza"], ["ref", "Reflejos"], ["will", "Voluntad"]].map(([key, label]) => {
+            const parts = saveBreakdown(character, key);
+            return <div key={key}>
+              <strong>{label}: {bonus(calculateSaveTotal(character, key))}</strong>
+              {numeric(`saves.${key}`, character.saves?.mode === "calculated" ? `${label}: base y ajustes manuales` : `${label}: total manual sin efectos vinculados`, character.saves?.[key])}
+              <small>{character.saves?.mode === "calculated" ? `Base ${bonus(parts.base)} · atributo ${bonus(parts.ability)} · efectos ${bonus(parts.effects)}` : `Manual ${bonus(parts.base)} · efectos ${bonus(parts.effects)}`}</small>
+            </div>;
+          })}
           {numeric("hp.max", "Vida máxima", character.hp?.max, { min: 1 })}
         </div>
+        <label className="checkbox-field"><input type="checkbox" disabled={saving} checked={character.saves?.mode === "calculated"} onChange={(event) => onUpdate({ saves: convertSavesMode(character, event.target.checked ? "calculated" : "manual") })} />Recalcular salvaciones al cambiar atributos</label>
         <p className="stats-caption">
-          Puedes aplicar daño y curación desde Partida.
+          Cambiar de modo conserva los totales actuales. En modo automático se suman base, atributo y efectos. La base se ajusta al subir de nivel. Puedes aplicar daño y curación desde Partida.
         </p>
       </section>
+      <EffectsPanel character={character} onUpdate={onUpdate} saving={saving} />
       <section className="surface attacks-surface">
         <div className="section-heading">
           <div>
@@ -231,6 +260,7 @@ export default function StatsTab({
           onClose={() => setEditor(null)}
           onSave={(data) =>
             onUpdate({
+              ...renameModifierReferences(character, "attackName", editor.item?.name, data.name),
               attacks: editor.item
                 ? character.attacks.map((item) =>
                     item._id === data._id ? data : item,

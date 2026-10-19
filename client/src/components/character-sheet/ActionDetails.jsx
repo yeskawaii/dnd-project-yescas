@@ -8,6 +8,11 @@ import {
   calculateAttackTotal,
   calculateDamageBonus,
   calculateSkillTotal,
+  canUseSkill,
+  weaponDamage,
+  attackBreakdown,
+  skillBreakdown,
+  equipInventory,
 } from "../../utils/conversions";
 
 export default function ActionDetails({
@@ -26,7 +31,11 @@ export default function ActionDetails({
     (entry) => actionKey(entry) === action.key,
   );
   const item = action.item;
+  const usable = action.kind !== "skill" || canUseSkill(item);
+  const attackParts = action.kind === "attack" ? attackBreakdown(item, character) : null;
+  const skillParts = action.kind === "skill" ? skillBreakdown(item, character) : null;
   const roll = (damage = false) => {
+    if (!usable) return;
     let expression = "1d20";
     let modifier = 0;
     if (action.kind === "attack") {
@@ -35,7 +44,7 @@ export default function ActionDetails({
         ? calculateDamageBonus(item, character)
         : calculateAttackTotal(item, character);
     } else if (action.kind === "skill")
-      modifier = calculateSkillTotal(item, character.stats || {});
+      modifier = calculateSkillTotal(item, character);
     const rolled = rollDice(expression);
     if (!rolled) {
       setResult({
@@ -48,7 +57,8 @@ export default function ActionDetails({
     setResult({
       ...rolled,
       modifier: rolled.modifier + modifier,
-      total: rolled.total + modifier,
+      total: damage ? weaponDamage(rolled.total, item, character) : rolled.total + modifier,
+      minimumDamage: damage && rolled.total + modifier < 1,
       expression,
       damage,
     });
@@ -93,13 +103,17 @@ export default function ActionDetails({
               ? "Tira un d20 con el bono de tu ficha. Consulta con tu DM la dificultad de la prueba."
               : "Todavía no hay una descripción para este recurso.")}
       </p>
+      {attackParts && <p className="helper-text">Ataque {bonus(attackParts.total)} = BAB {bonus(attackParts.base)} · {attackParts.stat} {bonus(attackParts.ability)} · tamaño {bonus(attackParts.size)} · ajuste {bonus(attackParts.extra)} · efectos {bonus(attackParts.effects)} · escudo con Sutileza {bonus(attackParts.shieldPenalty)} · arco compuesto {bonus(attackParts.compositePenalty)}. Daño: {item.damageDice} {bonus(calculateDamageBonus(item, character))}.</p>}
+      {skillParts && <p className="helper-text">Atributo {bonus(skillParts.ability)} · rangos completos {skillParts.ranks} · ajuste {bonus(skillParts.misc)} · armadura {bonus(skillParts.penalty)} · efectos {bonus(skillParts.effects)}. Los medios rangos se conservan, pero solo los rangos completos mejoran la tirada.</p>}
+      {!usable && <p className="helper-text" role="status">Esta habilidad requiere al menos 1 rango para usarla.</p>}
+      {action.kind === "skill" && item.name?.startsWith("Saber (") && item.ranks < 1 && <p className="helper-text">Sin entrenamiento, Saber solo permite conocimientos comunes de CD 10 o menor.</p>}
       {(action.kind === "attack" || action.kind === "skill") && (
         <>
           <div className="button-row">
             <button
               className="button primary"
               onClick={() => roll()}
-              disabled={rolling}
+              disabled={rolling || !usable}
             >
               <Icon name="dice" />
               {action.kind === "attack" ? "Tirar ataque" : "Tirar habilidad"}
@@ -132,6 +146,7 @@ export default function ActionDetails({
                     {result.rolls.join(" + ")} {bonus(result.modifier)} ·{" "}
                     {result.expression}
                   </p>
+                  {result.minimumDamage && <p>Daño mínimo de un impacto: 1. Aplica después resistencia, reducción de daño u otros efectos con tu DM.</p>}
                 </>
               )}
             </div>
@@ -159,10 +174,10 @@ export default function ActionDetails({
         </button>
       )}
       {action.kind === "item" && (
-        <p className="helper-text">
-          Consulta sus efectos y aplícalos en la ficha. Los objetos no se
-          consumen automáticamente.
-        </p>
+        <>
+          <label className="checkbox-field"><input type="checkbox" disabled={saving} checked={Boolean(item.equipped)} onChange={(event) => onUpdate({ inventory: equipInventory(character.inventory, item._id, event.target.checked) })} />Equipado · aplicar protección y modificadores</label>
+          <p className="helper-text">Solo la protección y los modificadores registrados en el editor se aplican automáticamente. Las descripciones son recordatorios. Los objetos no se consumen automáticamente.</p>
+        </>
       )}
       {onUpdate && (
         <details className="resource-icon-details action-icon-customizer">

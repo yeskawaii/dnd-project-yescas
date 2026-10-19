@@ -1,6 +1,8 @@
 services:
   bag-backend:
-    build: ./server
+    build:
+      context: .
+      dockerfile: server/Dockerfile
     env_file:
       - .env
     container_name: bag-backend
@@ -21,7 +23,9 @@ services:
       - proxy-network
 
   bag-frontend:
-    build: ./client
+    build:
+      context: .
+      dockerfile: client/Dockerfile
     container_name: bag-frontend
     restart: always
     expose:

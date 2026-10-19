@@ -4,6 +4,7 @@ import Icon from "../ui/Icon";
 import BottomSheet from "../ui/BottomSheet";
 import DeleteSheet from "../ui/DeleteSheet";
 import ResourceEditor from "./ResourceEditor";
+import { renameModifierReferences } from "../../utils/conversions";
 
 const collections = { skill: "skills", trait: "traits", feat: "feats" };
 
@@ -19,6 +20,7 @@ export default function FeaturesTab({
   const save = (data) => {
     const collection = collections[editor.kind];
     return onUpdate({
+      ...(editor.kind === "skill" ? renameModifierReferences(character, "skillName", editor.item?.name, data.name) : {}),
       [collection]: editor.item
         ? character[collection].map((item) =>
             item._id === data._id ? data : item,

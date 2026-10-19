@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { calculateSkillTotal } from "../utils/conversions";
+import { calculateSkillTotal, canUseSkill } from "../utils/conversions";
 import { actionKey, bonus } from "../utils/quickActions";
 import FavoriteButton from "./ui/FavoriteButton";
 import Icon from "./ui/Icon";
@@ -28,8 +28,8 @@ export default function SkillTable({
     .sort((a, b) =>
       sort === "alpha"
         ? a.name.localeCompare(b.name)
-        : calculateSkillTotal(b, character.stats) -
-          calculateSkillTotal(a, character.stats),
+        : calculateSkillTotal(b, character) -
+          calculateSkillTotal(a, character),
     );
   const favorites = (character.quickActions || []).map(actionKey);
   return (
@@ -103,13 +103,14 @@ export default function SkillTable({
                 onClick={() => onEditSkill?.(skill)}
               >
                 <Icon name={resourceIcon(skill, "skill")} size={16} />
-                {bonus(calculateSkillTotal(skill, character.stats))}
+                {canUseSkill(skill) ? bonus(calculateSkillTotal(skill, character)) : "—"}
               </button>
               <div>
                 <strong>{skill.name}</strong>
                 <small>
                   {skill.stat}
                   {skill.isClassSkill ? " · De clase" : ""}
+                  {!canUseSkill(skill) ? " · Requiere entrenamiento" : ""}
                 </small>
               </div>
               <label className="skill-ranks">

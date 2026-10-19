@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { modifiers, defenseFields } from "./RuleModifier.js";
 import {
   appearanceSchema,
   playLayoutSchema,
@@ -114,6 +115,11 @@ const characterSchema = new mongoose.Schema(
         critRange: { type: String, default: "20" }, // "19-20" o "20"
         critMultiplier: { type: String, default: "x2" }, // "x2", "x3"
         type: { type: String, default: "Melee" }, // "Melee", "Ranged", "Finesse"
+        hands: { type: String, enum: ["one", "two", "offHand"], default: "one" },
+        finesse: { type: Boolean, default: false },
+        light: { type: Boolean, default: false },
+        rangedDamage: { type: String, enum: ["none", "bow", "composite", "strength"], default: "none" },
+        strengthRating: { type: Number, min: 0, max: 100, default: 0, validate: Number.isInteger },
         damageType: { type: String, default: "Cortante" }, // "Cortante", "Perforante"
       },
     ],
@@ -127,6 +133,7 @@ const characterSchema = new mongoose.Schema(
     },
 
     saves: {
+      mode: { type: String, enum: ["manual", "calculated"], default: "manual" },
       fort: { type: Number, default: 0 },
       ref: { type: Number, default: 0 },
       will: { type: Number, default: 0 },
@@ -137,6 +144,10 @@ const characterSchema = new mongoose.Schema(
       shield: { type: Number, default: 0 },
       natural: { type: Number, default: 0 },
       misc: { type: Number, default: 0 },
+      deflection: { type: Number, default: 0 },
+      dodge: { type: Number, default: 0 },
+      maxDex: { type: Number, min: 0, max: 100, default: null, validate: (value) => value == null || Number.isInteger(value) },
+      checkPenalty: { type: Number, min: -100, max: 0, default: 0, validate: Number.isInteger },
     },
 
     hp: {
@@ -150,8 +161,17 @@ const characterSchema = new mongoose.Schema(
         name: { type: String, required: true },
         type: { type: String, default: "General" }, // Ej: Combate, Magia, Racial, Clase
         desc: { type: String, required: true },
+        active: { type: Boolean, default: true },
+        modifiers: modifiers(),
       },
     ],
+
+    effects: [{
+      name: { type: String, required: true, maxlength: 150 },
+      desc: { type: String, maxlength: 5000, default: "" },
+      active: { type: Boolean, default: true },
+      modifiers: modifiers(),
+    }],
 
     // STATS (Usando los nombres que ya tienes en tu frontend)
     stats: {
@@ -173,6 +193,7 @@ const characterSchema = new mongoose.Schema(
           ranks: { type: Number, default: 0 },
           miscModifier: { type: Number, default: 0 },
           isClassSkill: { type: Boolean, default: false },
+          trainedOnly: { type: Boolean, default: undefined },
         },
       ],
       default: defaultSkills,
@@ -191,6 +212,8 @@ const characterSchema = new mongoose.Schema(
         weight: { type: Number, default: 0 },
         desc: String,
         icon: { type: String, default: "📦" },
+        ...defenseFields,
+        modifiers: modifiers(),
       },
     ],
 

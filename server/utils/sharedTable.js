@@ -1,3 +1,4 @@
+import { compareInitiative } from "../../shared/characterRules.mjs";
 // An allowlist, not a serialized DM workspace: private data never enters the response.
 export function playerTable(campaign, characterId) {
   const workspace = campaign.dmWorkspace;
@@ -5,7 +6,7 @@ export function playerTable(campaign, characterId) {
   const enabled = presentation?.enabled === true;
   const visible = enabled ? (workspace.combat?.combatants || [])
     .filter((entry) => entry.kind === "player" || entry.visibleToPlayers === true)
-    .sort((a, b) => b.initiative - a.initiative) : [];
+    .sort(compareInitiative) : [];
   const visibleIds = new Set(visible.map((entry) => entry.id));
   const combatants = visible.map((entry) => ({
     id: entry.id, name: entry.name, kind: entry.kind, initiative: entry.initiative,

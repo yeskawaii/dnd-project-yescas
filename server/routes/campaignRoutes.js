@@ -115,7 +115,7 @@ router.get("/:id/dashboard", protect, async (req, res) => {
     }
 
     const players = await Character.find({ campaign: campaign._id }).select(
-      "name class race level hp armorClass initiativeMisc baseAttack saves stats speed attacks spells feats skills traits",
+      "name class race size level hp armorClass initiativeMisc baseAttack saves stats speed attacks spells feats skills traits inventory effects",
     );
 
     res.json({ campaign, players });
