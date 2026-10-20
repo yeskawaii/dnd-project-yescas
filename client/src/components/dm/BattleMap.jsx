@@ -1,16 +1,18 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Icon from "../ui/Icon";
+import TacticalGrid from "../shared-table/TacticalGrid";
+import { cellDistance } from "../../utils/mapGeometry";
 import { resizeMap } from "../../utils/dmWorkspace";
 
 const tools = {
   token: "Mover ficha",
+  measure: "Medir distancia",
   floor: "Borrar terreno",
   wall: "Muro",
   water: "Agua",
   door: "Puerta",
   fog: "Niebla",
 };
-const symbols = { wall: "▧", water: "≈", door: "▥", fog: "?" };
 export default function BattleMap({
   map,
   combatants,
@@ -20,13 +22,17 @@ export default function BattleMap({
 }) {
   const [tool, setTool] = useState("token");
   const [selected, setSelected] = useState("");
+  const [measurement, setMeasurement] = useState([]);
+  const paintMap = useRef(map);
+  useEffect(() => { paintMap.current = map; }, [map]);
   const selectedId = combatants.some((entry) => entry.id === selected)
     ? selected
     : combatants[0]?.id || "";
-  const cells = new Map(
-    map.cells.map((cell) => [`${cell.x}:${cell.y}`, cell.terrain]),
-  );
   const click = (x, y) => {
+    if (tool === "measure") {
+      setMeasurement((previous) => previous.length === 1 ? [...previous, { x, y }] : [{ x, y }]);
+      return;
+    }
     if (tool === "token") {
       if (!selectedId) return;
       const occupant = map.tokens.find(
@@ -45,13 +51,19 @@ export default function BattleMap({
         ],
       });
     } else {
-      onChange({
-        ...map,
+      // Pointer-enter events can arrive before React renders the previous stroke.
+      const current = paintMap.current;
+      const previous = current.cells.find((cell) => cell.x === x && cell.y === y);
+      if ((tool === "floor" && !previous) || previous?.terrain === tool) return;
+      const next = {
+        ...current,
         cells: [
-          ...map.cells.filter((cell) => cell.x !== x || cell.y !== y),
+          ...current.cells.filter((cell) => cell.x !== x || cell.y !== y),
           ...(tool === "floor" ? [] : [{ x, y, terrain: tool }]),
         ],
-      });
+      };
+      paintMap.current = next;
+      onChange(next);
     }
   };
   return (
@@ -64,9 +76,9 @@ export default function BattleMap({
         <span className="edition-pill">Edición del DM</span>
       </div>
       <p className="helper-text">
-        Dibuja casillas y coloca las fichas del encuentro. Selecciona una ficha
+        Dibuja el terreno y coloca las fichas del encuentro. Selecciona una ficha
         y toca su destino; toca otra para seleccionarla. Los movimientos son
-        libres.
+        libres. En computadora, mantén pulsado y recorre el mapa para pintar. Usa las flechas y Enter para editar con teclado.
       </p>
       <div className="dm-filter-row">
         <label className="form-field">
@@ -77,13 +89,23 @@ export default function BattleMap({
             onChange={(event) => onChange({ ...map, name: event.target.value })}
           />
         </label>
+        <label className="form-field">Formato del mapa
+          <select value={map.gridType || "square"} onChange={(event) => onChange({ ...map, gridType: event.target.value })}>
+            <option value="hex">Hexágonos</option><option value="square">Cuadrícula</option>
+          </select>
+        </label>
+        <label className="form-field">Escala por celda
+          <select value={map.feetPerCell || 5} onChange={(event) => onChange({ ...map, feetPerCell: Number(event.target.value) })}>
+            {[...new Set([5, 10, 30, map.feetPerCell || 5])].sort((a, b) => a - b).map((value) => <option key={value} value={value}>{value} ft</option>)}
+          </select>
+        </label>
         <label className="form-field">
           Tamaño
           <select
             value={`${map.width}x${map.height}`}
             onChange={(event) => {
               const [width, height] = event.target.value.split("x").map(Number);
-              const apply = () => onChange(resizeMap(map, width, height));
+              const apply = () => { setMeasurement([]); onChange(resizeMap(map, width, height)); };
               if (width < map.width || height < map.height)
                 onDelete(
                   "Reducir mapa",
@@ -93,13 +115,13 @@ export default function BattleMap({
               else apply();
             }}
           >
-            {[
+            {[[map.width, map.height], ...[
               [12, 10],
               [16, 12],
               [20, 16],
               [24, 20],
               [30, 30],
-            ].map(([width, height]) => (
+            ].filter(([width, height]) => width !== map.width || height !== map.height)].map(([width, height]) => (
               <option key={width} value={`${width}x${height}`}>
                 {width} × {height}
               </option>
@@ -156,47 +178,15 @@ export default function BattleMap({
           Retirar ficha
         </button>
       </div>
-      <div
-        className="dm-map-scroll"
-        tabIndex={0}
-        role="region"
-        aria-label="Mapa desplazable"
-      >
-        <div
-          className="dm-map-grid"
-          style={{ gridTemplateColumns: `repeat(${map.width}, 42px)` }}
-        >
-          {Array.from({ length: map.width * map.height }, (_, index) => {
-            const x = index % map.width,
-              y = Math.floor(index / map.width);
-            const terrain = cells.get(`${x}:${y}`);
-            const token = map.tokens.find(
-              (entry) => entry.x === x && entry.y === y,
-            );
-            const actor = combatants.find(
-              (entry) => entry.id === token?.combatantId,
-            );
-            return (
-              <button
-                key={index}
-                type="button"
-                className={`dm-map-cell ${terrain || "floor"} ${actor?.id === activeId ? "current-turn" : ""} ${actor?.id === selectedId ? "selected-token" : ""}`}
-                aria-label={`Columna ${x + 1}, fila ${y + 1}: ${actor?.name || tools[terrain] || "suelo"}`}
-                title={`${x + 1}, ${y + 1}${actor ? ` · ${actor.name}` : ""}`}
-                onClick={() => click(x, y)}
-              >
-                {actor ? (
-                  <span className={`dm-token ${actor.kind}`}>
-                    {combatants.findIndex((entry) => entry.id === actor.id) + 1}
-                  </span>
-                ) : (
-                  symbols[terrain]
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {activeId && <button className="text-button" onClick={() => { setSelected(activeId); setTool("token"); }}>Seleccionar ficha del turno</button>}
+      {tool === "measure" && <div className="dm-map-measurement" role="status">
+        {measurement.length === 2 ? `Distancia: ${cellDistance(map, measurement[0], measurement[1]) * (map.feetPerCell || 5)} ft · ${cellDistance(map, measurement[0], measurement[1])} celdas` : measurement.length === 1 ? "Selecciona el destino." : "Toca el origen y el destino para medir."}
+        <p className="helper-text">Distancia directa sin obstáculos ni terreno difícil.{map.gridType !== "hex" ? " Las diagonales alternan 1 y 2 celdas." : " Cada paso entre hexágonos vecinos cuenta una celda."}</p>
+        {measurement.length > 0 && <button className="text-button" onClick={() => setMeasurement([])}>Borrar medición</button>}
+      </div>}
+      <TacticalGrid map={map} combatants={combatants} activeId={activeId} selectedId={selectedId}
+        onCellClick={click} onPaint={!["token", "measure"].includes(tool) ? click : undefined}
+        measurement={tool === "measure" ? measurement.filter((point) => point.x < map.width && point.y < map.height) : []} />
       <div className="dm-token-legend">
         {combatants.map((entry, i) => (
           <button
@@ -218,7 +208,8 @@ export default function BattleMap({
       <p className="helper-text">
         La niebla oculta las fichas de sus casillas a los jugadores. Activa
         Compartir el mapa táctico en Compartir para actualizar sus pantallas.
-        Las criaturas permanecen ocultas hasta que las reveles en Combate.
+        Controla la visibilidad de cada criatura desde Combate; los acompañantes
+        se añaden visibles.
       </p>
       <button
         className="text-button dm-danger"

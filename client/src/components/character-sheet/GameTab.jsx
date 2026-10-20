@@ -285,6 +285,7 @@ export default function GameTab({
           Ver hechizos
           <Icon name="chevron" size={14} />
         </button>
+        <button onClick={() => onBrowse("companions")}><Icon name="paw" size={17} />Acompañantes ({(character.companions || []).filter((entry) => entry.active).length} presentes)<Icon name="chevron" size={14} /></button>
         <button onClick={() => onBrowse("features")}>
           <Icon name="skill" size={17} />
           Ver habilidades

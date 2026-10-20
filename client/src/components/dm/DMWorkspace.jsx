@@ -7,6 +7,7 @@ import ActorForm from "./ActorForm";
 import EntityDetails from "./EntityDetails";
 import NotesPanel from "./NotesPanel";
 import BattleMap from "./BattleMap";
+import PartyCompanions from "./PartyCompanions";
 import CombatPanel from "./CombatPanel";
 import PresentationPanel from "./PresentationPanel";
 import "../shared-table/sharedTable.css";
@@ -15,6 +16,8 @@ import {
   emptyWorkspace,
   kindLabels,
   makeCombatant,
+  makeCompanionCombatant,
+  companionSourceId,
   newId,
 } from "../../utils/dmWorkspace";
 
@@ -139,6 +142,12 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
     }
     change({ ...workspace, combat: { ...workspace.combat, combatants } });
   };
+  const addCompanion = (player, companion) => {
+    const combatants = workspace.combat.combatants;
+    if (!companion.active || combatants.length >= 100 || combatants.some((entry) => entry.sourceId === companionSourceId(player, companion))) return;
+    change({ ...workspace, combat: { ...workspace.combat, combatants: [...combatants, makeCompanionCombatant(player, companion, combatants)] } });
+    toast.success(`${companion.name} añadido al encuentro.`);
+  };
   const focusedPlayer =
     players.find((player) => player._id === partyFocus) || players[0];
   const filteredActors = workspace.actors.filter(
@@ -259,6 +268,8 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
             players={players}
             onChange={change}
             onAddPlayers={() => add(players, true)}
+            onBrowseParty={() => setTab("party")}
+            onAddCompanion={addCompanion}
             onBrowseLibrary={() => setTab("library")}
             onDelete={ask}
           />
@@ -332,6 +343,7 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
                     </div>
                   </div>
                   <EntityDetails entity={focusedPlayer} player />
+                  <PartyCompanions player={focusedPlayer} combatants={workspace.combat.combatants} onAdd={addCompanion} />
                 </article>
               )}
             </div>

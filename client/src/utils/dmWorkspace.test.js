@@ -130,3 +130,23 @@ test("shrinking a map removes off-grid terrain and tokens without changing retai
   assert.equal(next.tokens.length, 0);
   assert.equal(map.cells.length, 2);
 });
+
+test("companions of different characters have distinct sources and independent health snapshots", async () => {
+  const { makeCompanionCombatant, companionSourceId } = await import("./dmWorkspace.js");
+  const companion = { _id: "c1", name: "Nimbo", hp: { current: 4, max: 12 }, ac: 16, initiativeBonus: 3, speed: "40 ft", duration: "5 asaltos", actions: "Mordisco +3, 1d4", description: "Familiar" };
+  const player = { _id: "p1", name: "Lyra" };
+  const snapshot = makeCompanionCombatant(player, companion, [], "ally1");
+  assert.equal(snapshot.kind, "ally");
+  assert.equal(snapshot.visibleToPlayers, true);
+  assert.equal(snapshot.sourceId, "p1:c1");
+  assert.notEqual(companionSourceId({ _id: "p2" }, companion), snapshot.sourceId);
+  assert.equal(snapshot.hp, 4);
+  assert.equal(snapshot.maxHp, 12);
+  assert.equal(snapshot.ac, 16);
+  assert.equal(snapshot.initiativeBonus, 3);
+  assert.match(snapshot.description, /Lyra/);
+  assert.match(snapshot.description, /5 asaltos/);
+  assert.equal(snapshot.actions, companion.actions);
+  snapshot.hp = -2;
+  assert.equal(companion.hp.current, 4);
+});

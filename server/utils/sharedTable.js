@@ -19,6 +19,7 @@ export function playerTable(campaign, characterId) {
     const fog = new Set(source.cells.filter((cell) => cell.terrain === "fog")
       .map((cell) => `${cell.x}:${cell.y}`));
     map = {
+      gridType: source.gridType || "square", feetPerCell: source.feetPerCell || 5,
       name: source.name, width: source.width, height: source.height,
       cells: source.cells.map(({ x, y, terrain }) => ({ x, y, terrain })),
       tokens: source.tokens

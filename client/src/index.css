@@ -3522,3 +3522,46 @@ button {
 .dm-tie-breaker { flex-basis: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; padding: 6px 12px; }
 .dm-tie-breaker input { max-width: 90px; }
 @media (max-width: 420px) { .modifier-row { grid-template-columns: minmax(0, 1fr); } }
+
+/* Shared square / hexagonal tactical board. Geometry is identical for DM and party. */
+.tactical-grid { display: block; max-width: none; user-select: none; }
+.tactical-cell polygon { fill: #26352b; stroke: #52644f; stroke-width: 1; stroke-linejoin: round; }
+.tactical-cell.wall polygon { fill: #72756e; }
+.tactical-cell.water polygon { fill: #203d52; }
+.tactical-cell.door polygon { fill: #6b5230; }
+.tactical-cell.fog polygon { fill: #141b1b; }
+.tactical-cell[role="button"] { cursor: pointer; outline: none; }
+.tactical-cell[role="button"]:hover polygon, .tactical-cell[role="button"]:focus polygon { stroke: var(--gold); stroke-width: 3; }
+.tactical-cell.current-turn polygon { stroke: var(--gold); stroke-width: 3; }
+.tactical-cell.selected-token polygon { stroke: var(--mint); stroke-width: 3; }
+.tactical-cell.current-turn.selected-token polygon { stroke: var(--gold); }
+.tactical-cell.measured polygon { fill: #4a5540; }
+.tactical-token { fill: #805c33; stroke: #fff8; stroke-width: 1; }
+.tactical-token.player { fill: #4a6d50; }
+.tactical-token.monster { fill: #8a4540; }
+.tactical-token.ally { fill: #4c6088; }
+.tactical-token-number, .tactical-terrain { text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.tactical-token-number { fill: #fff1d8; font-size: 12px; font-weight: 700; }
+.tactical-terrain { fill: #b7c3b9; font-size: 22px; }
+.tactical-measure { pointer-events: none; stroke: #f2ce82; stroke-width: 3; }
+.tactical-measure line { stroke-dasharray: 7 4; }
+.tactical-measure circle { fill: #f2ce82; stroke: #222; stroke-width: 2; }
+.dm-map-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 14px 0; }
+.dm-map-toolbar .form-field { max-width: 120px; margin: 0; }
+.dm-map-toolbar .helper-text { margin: auto 0; }
+.dm-map-measurement { margin: 14px 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; color: var(--gold); }
+.companion-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.companion-card { padding: 20px; min-width: 0; overflow-wrap: anywhere; }
+.companion-card .section-heading { margin-bottom: 8px; }
+.companion-card h3 { margin: 0; }
+.companion-inactive { border-style: dashed; }
+.companion-vitals { display: flex; flex-wrap: wrap; gap: 14px; margin: 16px 0; color: var(--mint); }
+.companion-card .dm-actions { flex-wrap: wrap; margin-top: 12px; }
+.companion-form { padding: 0; border: 0; display: grid; gap: 16px; min-width: 0; }
+.companion-form-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.companion-presence { display: flex; align-items: center; gap: 10px; }
+.companion-presence input { width: auto; }
+.dm-companions { margin-top: 24px; }
+.dm-companions .button { margin-top: 12px; }
+.character-sections { overflow-x: auto; }
+.character-sections button { flex-shrink: 0; white-space: nowrap; }

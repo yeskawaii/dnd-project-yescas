@@ -22,6 +22,8 @@ export const emptyWorkspace = () => ({
   notes: [],
   map: {
     name: "Escena de batalla",
+    gridType: "hex",
+    feetPerCell: 5,
     width: 16,
     height: 12,
     cells: [],
@@ -92,4 +94,22 @@ export function resizeMap(map, width, height) {
     cells: map.cells.filter((cell) => cell.x < width && cell.y < height),
     tokens: map.tokens.filter((token) => token.x < width && token.y < height),
   };
+}
+
+// A stable, character-scoped reference prevents two owners' companions from colliding.
+export const companionSourceId = (player, companion) => `${player._id}:${companion._id}`;
+export function makeCompanionCombatant(player, companion, existing, id = newId()) {
+  const entry = makeCombatant({
+    id: companionSourceId(player, companion),
+    name: companion.name,
+    kind: "ally",
+    hp: companion.hp.current,
+    maxHp: companion.hp.max,
+    ac: companion.ac,
+    initiativeBonus: companion.initiativeBonus,
+    actions: companion.actions,
+    description: [`Acompañante de ${player.name}`, `Velocidad: ${companion.speed || "—"}`,
+      companion.duration && `Duración: ${companion.duration}`, companion.description].filter(Boolean).join("\n").slice(0, 12000),
+  }, false, existing, id);
+  return { ...entry, visibleToPlayers: true };
 }

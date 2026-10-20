@@ -112,6 +112,8 @@ export const dmWorkspaceSchema = new mongoose.Schema(
       type: new mongoose.Schema(
         {
           name: text(120, { default: "Escena de batalla" }),
+          gridType: { type: String, enum: ["square", "hex"], default: "square", required: true },
+          feetPerCell: integer(1, 100, { default: 5 }),
           width: integer(8, 30, { default: 16 }),
           height: integer(8, 30, { default: 12 }),
           cells: limited(cell, 900),

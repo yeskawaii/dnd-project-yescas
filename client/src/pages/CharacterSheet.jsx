@@ -8,6 +8,7 @@ import StatsTab from "../components/character-sheet/StatsTab";
 import FeaturesTab from "../components/character-sheet/FeaturesTab";
 import InventoryTab from "../components/character-sheet/InventoryTab";
 import SpellsTab from "../components/character-sheet/SpellsTab";
+import CompanionsTab from "../components/character-sheet/CompanionsTab";
 import NotesTab from "../components/character-sheet/NotesTab";
 import Icon from "../components/ui/Icon";
 import { actionKey } from "../utils/quickActions";
@@ -33,6 +34,7 @@ const sections = [
   { id: "stats", label: "Ficha" },
   { id: "features", label: "Habilidades y rasgos" },
   { id: "spells", label: "Hechizos" },
+  { id: "companions", label: "Acompañantes" },
 ];
 
 export default function CharacterSheet({
@@ -249,6 +251,9 @@ export default function CharacterSheet({
               )}
               {activeTab === "character" && section === "spells" && (
                 <SpellsTab {...shared} />
+              )}
+              {activeTab === "character" && section === "companions" && (
+                <CompanionsTab {...shared} />
               )}
               {activeTab === "inventory" && (
                 <InventoryTab {...shared} unitSystem={unitSystem} />

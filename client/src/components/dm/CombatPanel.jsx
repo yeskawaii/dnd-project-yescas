@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Icon from "../ui/Icon";
+import PartyCompanions from "./PartyCompanions";
 import EntityDetails from "./EntityDetails";
 import { initiativeTies, resolveInitiativeTies } from "../../utils/conversions";
 import {
@@ -14,6 +15,8 @@ export default function CombatPanel({
   players,
   onChange,
   onAddPlayers,
+  onBrowseParty,
+  onAddCompanion,
   onBrowseLibrary,
   onDelete,
 }) {
@@ -131,6 +134,7 @@ export default function CombatPanel({
           <Icon name="plus" size={16} />
           Añadir grupo
         </button>
+        <button className="button secondary compact" onClick={onBrowseParty}><Icon name="paw" size={16} />Añadir acompañantes</button>
         <button className="button secondary compact" onClick={onBrowseLibrary}>
           <Icon name="book" size={16} />
           Añadir criaturas
@@ -342,6 +346,7 @@ export default function CombatPanel({
                 player={Boolean(source)}
               />
             )}
+            {source && <PartyCompanions player={source} combatants={combat.combatants} onAdd={onAddCompanion} />}
             <button
               className="text-button dm-danger"
               onClick={() =>

@@ -81,10 +81,10 @@ router.patch('/:charId/update', async (req, res) => {
       'name', 'appearance', 'playLayout', 'class', 'level', 'race', 'deity', 'alignment', 'size', 'experience',
       'physicalWeight', 'height', 'baseAttack', 'speed', 'initiativeMisc', 'quickActions',
       'traits', 'attacks', 'money', 'saves', 'armorClass', 'hp', 'feats', 'stats',
-      'skills', 'weight', 'inventory', 'spells', 'notes', 'effects',
+      'skills', 'weight', 'inventory', 'spells', 'notes', 'effects', 'companions',
     ]);
     if (!updates || typeof updates !== 'object' || Array.isArray(updates) ||
-        Object.keys(updates).some(key => !editable.has(key.split('.')[0]) ||
+        Object.keys(updates).some(key => !editable.has(key.split('.')[0]) || key.startsWith('companions.') ||
           key.split('.').some(part => !part || part.startsWith('$') ||
             ['__proto__', 'constructor', 'prototype'].includes(part)))) {
       return res.status(400).json({ error: "Hay campos que no se pueden modificar desde la ficha" });
@@ -104,7 +104,8 @@ router.patch('/:charId/update', async (req, res) => {
     
     res.json(updatedChar); 
   } catch (err) {
-    res.status(500).json({ error: "No se pudo actualizar el personaje" });
+    const invalid = ["ValidationError", "CastError", "StrictModeError"].includes(err.name);
+    res.status(invalid ? 400 : 500).json({ error: invalid ? "Revisa los datos de la ficha: hay valores inválidos o demasiado largos" : "No se pudo actualizar el personaje" });
   }
 });
 

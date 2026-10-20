@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { companionSchema } from "./Companion.js";
 import { modifiers, defenseFields } from "./RuleModifier.js";
 import {
   appearanceSchema,
@@ -102,6 +103,16 @@ const characterSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Campaign",
       default: null,
+    },
+
+    companions: {
+      type: [companionSchema],
+      default: [],
+      validate: {
+        validator: (entries) => entries.length <= 50 && entries.every(Boolean) &&
+          new Set(entries.map((entry) => String(entry._id))).size === entries.length,
+        message: "Máximo 50 acompañantes con identificadores únicos",
+      },
     },
 
     // ATAQUES Y ARMAS

@@ -34,6 +34,7 @@ router.post("/create", protect, async (req, res) => {
       name,
       dm: dmId,
       inviteCode,
+      dmWorkspace: { map: { gridType: "hex" } },
     });
 
     res.status(201).json(campaign);
@@ -115,7 +116,7 @@ router.get("/:id/dashboard", protect, async (req, res) => {
     }
 
     const players = await Character.find({ campaign: campaign._id }).select(
-      "name class race size level hp armorClass initiativeMisc baseAttack saves stats speed attacks spells feats skills traits inventory effects",
+      "name class race size level hp armorClass initiativeMisc baseAttack saves stats speed attacks spells feats skills traits inventory effects companions",
     );
 
     res.json({ campaign, players });
@@ -176,6 +177,10 @@ router.put("/:id/workspace", protect, async (req, res) => {
       inviteCode: campaign.inviteCode,
       dmWorkspace: {
         ...workspace,
+        ...(workspace.map && typeof workspace.map === "object" && !Array.isArray(workspace.map) ? {
+          map: { gridType: campaign.dmWorkspace?.map?.gridType || "square",
+            feetPerCell: campaign.dmWorkspace?.map?.feetPerCell || 5, ...workspace.map },
+        } : {}),
         // Cached older clients must not erase newly introduced scenes and messages.
         ...(workspace.presentation === undefined && campaign.dmWorkspace?.presentation
           ? { presentation: campaign.dmWorkspace.presentation.toObject() } : {}),
