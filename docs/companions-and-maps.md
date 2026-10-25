@@ -32,6 +32,19 @@ visibles y el DM puede volver a ocultarlos.
 
 ## Mapas
 
+**Mapa → Ficha para colocar o mover** muestra los personajes del grupo y sus
+acompañantes presentes, aunque el combate esté vacío. Selecciona una ficha y
+toca una casilla para colocarla; **Colocar grupo** distribuye los personajes
+que faltan en casillas libres, sin muros ni niebla y sin mover los ya colocados.
+**Actualizar fichas del grupo** consulta los personajes y acompañantes actuales.
+
+Las fichas colocadas sin combate se guardan con el mapa, sin añadir turnos ni
+participantes al encuentro. Al añadir después ese personaje o acompañante al
+combate, se reutiliza su ficha y se conserva su posición. Cerrar el encuentro
+retira solo sus fichas y conserva las que pertenecen únicamente al mapa.
+El nombre de la escena ocupa una fila propia y aparece completo en el encabezado,
+con saltos de línea cuando la pantalla es estrecha.
+
 Las campañas nuevas empiezan con hexágonos. Los mapas existentes conservan la
 cuadrícula. **Mapa → Formato del mapa** cambia la geometría conservando terreno
 y coordenadas de las fichas. Los hexágonos tienen vértice superior y filas
@@ -52,9 +65,9 @@ los valores existentes.
 
 ### Movimiento de los jugadores
 
-Con el combate y el mapa compartidos, cada jugador puede mover la ficha de su
-personaje desde **Partida → Mesa compartida**. El DM primero debe añadir ese
-personaje al encuentro y colocar su ficha fuera de la niebla. La ficha propia
+Con la mesa y el mapa compartidos, cada jugador puede mover la ficha de su
+personaje desde **Partida → Mesa compartida**, incluso sin un combate. El DM
+primero debe colocar su ficha fuera de la niebla desde **Mapa**. La ficha propia
 queda seleccionada: basta tocar una casilla libre, o usar flechas y Enter.
 El movimiento se guarda al momento; el resto del grupo y el DM reciben las
 posiciones automáticamente cada cuatro segundos.

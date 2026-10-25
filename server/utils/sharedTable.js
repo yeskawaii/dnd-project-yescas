@@ -16,6 +16,9 @@ export function playerTable(campaign, characterId) {
   let map = null;
   if (enabled && presentation.shareMap && workspace.map) {
     const source = workspace.map;
+    const mapEntries = [...visible, ...(source.participants || [])
+      .filter((entry) => entry.kind === "player" || entry.visibleToPlayers === true)];
+    const mapIds = new Set(mapEntries.map((entry) => entry.id));
     const fog = new Set(source.cells.filter((cell) => cell.terrain === "fog")
       .map((cell) => `${cell.x}:${cell.y}`));
     map = {
@@ -23,11 +26,14 @@ export function playerTable(campaign, characterId) {
       name: source.name, width: source.width, height: source.height,
       cells: source.cells.map(({ x, y, terrain }) => ({ x, y, terrain })),
       tokens: source.tokens
-        .filter((token) => visibleIds.has(token.combatantId) && !fog.has(`${token.x}:${token.y}`))
+        .filter((token) => mapIds.has(token.combatantId) && !fog.has(`${token.x}:${token.y}`))
         .map(({ combatantId, x, y }) => ({ combatantId, x, y })),
     };
+    const placedIds = new Set(map.tokens.map((token) => token.combatantId));
+    map.participants = mapEntries.filter((entry) => placedIds.has(entry.id))
+      .map(({ id, name, kind }) => ({ id, name, kind }));
     // Only expose control of this character's placed, visible player tokens.
-    const owned = new Set(visible.filter((entry) => entry.kind === "player" &&
+    const owned = new Set(mapEntries.filter((entry) => entry.kind === "player" &&
       entry.sourceId === String(characterId)).map((entry) => entry.id));
     map.movableTokenIds = map.tokens.filter((token) => owned.has(token.combatantId))
       .map((token) => token.combatantId);

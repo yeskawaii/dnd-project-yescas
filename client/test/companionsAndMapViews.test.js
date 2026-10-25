@@ -92,3 +92,21 @@ test("players get movement controls only for their own placed tokens in either m
     assert.ok(unplaced.includes("colocar tu ficha en una zona visible"));
   }
 });
+
+test("DM map offers the party and active companions without asking for a combat first", () => {
+  const name = "Una escena con un nombre muy largo para reconocerla en pantallas pequeñas";
+  const html = render(BattleMap, { map: { ...map, name, tokens: [] }, combatants: [], players: [player], onChange: noop, onDelete: noop, onRefreshPlayers: noop });
+  for (const text of [name, "Personajes del grupo", "Lyra", "Nimbo", "Colocar grupo", "Sin colocar", "Actualizar fichas del grupo", "sin iniciar un combate"]) assert.ok(html.includes(text), text);
+  assert.ok(!html.includes("Agrega participantes en Combate"));
+  assert.match(html, /<h2 class="dm-map-scene-name">/);
+  const empty = render(BattleMap, { map: { ...map, tokens: [] }, combatants: [], onChange: noop, onDelete: noop });
+  assert.ok(empty.includes("No hay fichas disponibles"));
+  assert.ok(empty.includes("Cuando los personajes se unan a la contienda"));
+});
+
+test("shared exploration maps display and move participants outside the encounter", () => {
+  const html = render(SharedBattleMap, { map: { ...map, participants: [{ id: "ally1", kind: "player", name: "Lyra" }], movableTokenIds: ["ally1"] }, combatants: [], onMoveToken: noop });
+  assert.ok(html.includes("Mueves a Lyra"));
+  assert.ok(html.includes("Tu ficha"));
+  assert.ok(html.includes('data-combatant="ally1"'));
+});

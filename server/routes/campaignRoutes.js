@@ -240,7 +240,9 @@ router.put("/:id/workspace", protect, async (req, res) => {
         ...workspace,
         ...(workspace.map && typeof workspace.map === "object" && !Array.isArray(workspace.map) ? {
           map: { gridType: campaign.dmWorkspace?.map?.gridType || "square",
-            feetPerCell: campaign.dmWorkspace?.map?.feetPerCell || 5, ...workspace.map },
+            feetPerCell: campaign.dmWorkspace?.map?.feetPerCell || 5,
+            participants: campaign.dmWorkspace?.map?.participants?.map((entry) => entry.toObject()) || [],
+            ...workspace.map },
         } : {}),
         // Cached older clients must not erase newly introduced scenes and messages.
         ...(workspace.presentation === undefined && campaign.dmWorkspace?.presentation

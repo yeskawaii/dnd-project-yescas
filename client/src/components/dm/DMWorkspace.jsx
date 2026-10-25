@@ -20,6 +20,7 @@ import {
   mergeTokenUpdates,
   companionSourceId,
   newId,
+  addCombatantToWorkspace,
 } from "../../utils/dmWorkspace";
 
 const tabs = [
@@ -195,8 +196,9 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack, onCustom
     }
   };
   const add = (entities, isPlayer) => {
-    const combatants = [...workspace.combat.combatants];
+    let next = workspace;
     for (const entity of entities) {
+      const combatants = next.combat.combatants;
       if (
         isPlayer &&
         combatants.some(
@@ -208,14 +210,14 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack, onCustom
         toast.error("El encuentro admite hasta 100 participantes.");
         break;
       }
-      combatants.push(makeCombatant(entity, isPlayer, combatants));
+      next = addCombatantToWorkspace(next, makeCombatant(entity, isPlayer, combatants));
     }
-    change({ ...workspace, combat: { ...workspace.combat, combatants } });
+    change(next);
   };
   const addCompanion = (player, companion) => {
     const combatants = workspace.combat.combatants;
     if (!companion.active || combatants.length >= 100 || combatants.some((entry) => entry.sourceId === companionSourceId(player, companion))) return;
-    change({ ...workspace, combat: { ...workspace.combat, combatants: [...combatants, makeCompanionCombatant(player, companion, combatants)] } });
+    change(addCombatantToWorkspace(workspace, makeCompanionCombatant(player, companion, combatants)));
     toast.success(`${companion.name} añadido al encuentro.`);
   };
   const focusedPlayer =
@@ -589,6 +591,9 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack, onCustom
         {tab === "map" && (
           <BattleMap
             map={workspace.map}
+            players={players}
+            onRefreshPlayers={refreshPlayers}
+            refreshing={refreshing}
             combatants={workspace.combat.combatants}
             activeId={workspace.combat.activeId}
             onChange={(map) => change({ ...workspace, map })}

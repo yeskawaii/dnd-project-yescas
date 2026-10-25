@@ -174,3 +174,36 @@ test("DM synchronization exposes the full workspace only to its DM", async (cont
   assert.equal(allowed.headers["Cache-Control"], "private, no-store");
   assert.equal(allowed.body.workspace.notes[0].title, "DM_PRIVATE_NOTE");
 });
+
+test("exploration tokens persist with no combat and expose only visible map identities", async () => {
+  const doc = campaign();
+  const w = doc.dmWorkspace;
+  w.map.participants = w.combat.combatants.map((entry) => ({ ...entry.toObject(), actions: "PRIVATE_ACTION", description: "PRIVATE_HISTORY" }));
+  w.combat.combatants = [];
+  await doc.validate();
+  const reloaded = new Campaign(doc.toObject());
+  await reloaded.validate();
+  const view = playerTable(reloaded, characterId);
+  assert.deepEqual(view.combat.combatants, []);
+  assert.deepEqual(view.map.movableTokenIds, ["mine"]);
+  assert.deepEqual(view.map.participants.map((entry) => entry.name), ["Lyra", "Eldrin", "Nimbo"]);
+  for (const privateValue of ["PRIVATE_ACTION", "PRIVATE_HISTORY", "SECRET_ENEMY", "sourceId", "ac"])
+    assert.ok(!JSON.stringify(view.map.participants).includes(`\"${privateValue}`), privateValue);
+  reloaded.dmWorkspace.map.cells.push({ x: 1, y: 1, terrain: "fog" });
+  const fogged = playerTable(reloaded, characterId);
+  assert.ok(!fogged.map.participants.some((entry) => entry.id === "mine"));
+  assert.deepEqual(fogged.map.movableTokenIds, []);
+});
+
+test("map participants must have unique identities and tokens must reference a known participant", async () => {
+  for (const change of [
+    (w) => w.map.participants.push({ id: "mine", name: "Duplicate", kind: "player" }),
+    (w) => w.map.participants.push({ id: "scene", name: "One", kind: "player" }, { id: "scene", name: "Two", kind: "player" }),
+    (w) => w.map.tokens.push({ combatantId: "unknown", x: 0, y: 0 }),
+    (w) => { w.map.participants = Array.from({ length: 101 }, (_, i) => ({ id: `scene:${i}`, name: "Too many", kind: "player" })); },
+  ]) {
+    const doc = campaign();
+    change(doc.dmWorkspace);
+    await assert.rejects(doc.validate(), { name: "ValidationError" });
+  }
+});

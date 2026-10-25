@@ -28,6 +28,7 @@ export const emptyWorkspace = () => ({
     height: 12,
     cells: [],
     tokens: [],
+    participants: [],
   },
 });
 export const orderedCombatants = (combat) =>
@@ -96,6 +97,74 @@ export function resizeMap(map, width, height) {
   };
 }
 
+// Map presence is independent of initiative. Reuse encounter identities when present.
+export function mapRoster(map, combatants, players = []) {
+  const saved = map.participants || [];
+  const entries = [...combatants];
+  const sources = new Set(entries.map((entry) => entry.sourceId));
+  for (const player of players) {
+    if (!sources.has(player._id)) {
+      entries.push(saved.find((entry) => entry.sourceId === player._id && entry.kind === "player") ||
+        makeCombatant(player, true, [], `player:${player._id}`));
+      sources.add(player._id);
+    }
+    for (const companion of player.companions || []) {
+      const source = companionSourceId(player, companion);
+      if (!companion.active || sources.has(source)) continue;
+      entries.push(saved.find((entry) => entry.sourceId === source) ||
+        makeCompanionCombatant(player, companion, [], `companion:${source}`));
+      sources.add(source);
+    }
+  }
+  const ids = new Set(entries.map((entry) => entry.id));
+  entries.push(...saved.filter((entry) => !ids.has(entry.id)));
+  return entries;
+}
+
+export function placeMapToken(map, combatants, entry, x, y) {
+  const placed = map.tokens.some((token) => token.combatantId === entry.id);
+  const registered = [...combatants, ...(map.participants || [])].some((item) => item.id === entry.id);
+  if (x < 0 || y < 0 || x >= map.width || y >= map.height ||
+      (!placed && map.tokens.length >= 100) ||
+      (!registered && (map.participants || []).length >= 100) ||
+      map.tokens.some((token) => token.x === x && token.y === y && token.combatantId !== entry.id)) return null;
+  return {
+    ...map,
+    participants: registered ? (map.participants || []) : [...(map.participants || []), entry],
+    tokens: [...map.tokens.filter((token) => token.combatantId !== entry.id), { combatantId: entry.id, x, y }],
+  };
+}
+
+export function placePartyOnMap(map, combatants, players) {
+  const playerIds = new Set(players.map((player) => player._id));
+  const party = mapRoster(map, combatants, players).filter((entry) =>
+    entry.kind === "player" && playerIds.has(entry.sourceId));
+  let next = map;
+  for (const entry of party) {
+    if (next.tokens.some((token) => token.combatantId === entry.id)) continue;
+    const occupied = new Set(next.tokens.map((token) => `${token.x}:${token.y}`));
+    const blocked = new Set(next.cells.filter((cell) => ["wall", "fog"].includes(cell.terrain)).map((cell) => `${cell.x}:${cell.y}`));
+    const index = Array.from({ length: next.width * next.height }, (_, i) => i)
+      .find((i) => !occupied.has(`${i % next.width}:${Math.floor(i / next.width)}`) && !blocked.has(`${i % next.width}:${Math.floor(i / next.width)}`));
+    if (index === undefined) break;
+    const placed = placeMapToken(next, combatants, entry, index % next.width, Math.floor(index / next.width));
+    if (!placed) break;
+    next = placed;
+  }
+  return next;
+}
+
+export function addCombatantToWorkspace(workspace, entry) {
+  const existing = (workspace.map.participants || []).find((item) =>
+    item.sourceId === entry.sourceId && item.kind === entry.kind);
+  const participant = existing ? { ...entry, id: existing.id } : entry;
+  return {
+    ...workspace,
+    combat: { ...workspace.combat, combatants: [...workspace.combat.combatants, participant] },
+    map: { ...workspace.map, participants: (workspace.map.participants || []).filter((item) => item.id !== participant.id) },
+  };
+}
+
 // Rebase incoming token moves without losing the DM's pending edits. Other remote
 // edits still require an explicit reload, as with the existing revision guard.
 export function mergeTokenUpdates(base, local, remote) {
@@ -105,7 +174,7 @@ export function mergeTokenUpdates(base, local, remote) {
   const ours = new Map(local.map.tokens.map((token) => [token.combatantId, token]));
   const theirs = new Map(remote.map.tokens.map((token) => [token.combatantId, token]));
   const ids = new Set([...before.keys(), ...ours.keys(), ...theirs.keys()]);
-  const combatantIds = new Set(local.combat.combatants.map((entry) => entry.id));
+  const combatantIds = new Set([...local.combat.combatants, ...(local.map.participants || [])].map((entry) => entry.id));
   const tokens = [];
   const positions = new Set();
   for (const id of ids) {

@@ -118,6 +118,7 @@ export const dmWorkspaceSchema = new mongoose.Schema(
           height: integer(8, 30, { default: 12 }),
           cells: limited(cell, 900),
           tokens: limited(token, 100),
+          participants: limited(combatant, 100),
         },
         options,
       ),
@@ -142,6 +143,9 @@ dmWorkspaceSchema.pre("validate", function () {
     this.invalidate("combat", "Los combatientes no pueden repetirse");
   if (this.combat.activeId && !ids.includes(this.combat.activeId))
     this.invalidate("combat.activeId", "Turno inválido");
+  const mapIds = [...ids, ...(this.map.participants || []).map((entry) => entry?.id)];
+  if (new Set(mapIds).size !== mapIds.length)
+    this.invalidate("map.participants", "Las fichas del mapa no pueden repetirse ni duplicar participantes del combate");
   const positions = new Set();
   const tokenIds = new Set();
   for (const entry of [...(this.map.cells || []), ...(this.map.tokens || [])]) {
@@ -149,7 +153,7 @@ dmWorkspaceSchema.pre("validate", function () {
     if (entry.x >= this.map.width || entry.y >= this.map.height)
       this.invalidate("map", "Posición fuera del mapa");
     if (entry.combatantId) {
-      if (!ids.includes(entry.combatantId) || tokenIds.has(entry.combatantId))
+      if (!mapIds.includes(entry.combatantId) || tokenIds.has(entry.combatantId))
         this.invalidate("map.tokens", "Ficha inválida o repetida");
       tokenIds.add(entry.combatantId);
     } else {

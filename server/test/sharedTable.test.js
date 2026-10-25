@@ -232,3 +232,25 @@ test("an older client saving without presentation fields preserves existing scen
   await save(request(workspace), res);
   assert.equal(res.statusCode, 200);
 });
+
+test("saving exploration participants preserves tokens and supports older clients omitting the roster", async (context) => {
+  const doc = campaign();
+  doc.dmWorkspace.map.participants.push({ id: "explorer", sourceId: characterId, name: "Lyra", kind: "player" });
+  doc.dmWorkspace.map.tokens.push({ combatantId: "explorer", x: 3, y: 4 });
+  context.mock.method(Campaign, "findById", async () => doc);
+  context.mock.method(Campaign, "findOneAndUpdate", async (filter, update) => {
+    const saved = new Campaign({ ...doc.toObject(), dmWorkspace: update.$set.dmWorkspace });
+    await saved.validate();
+    assert.equal(saved.dmWorkspace.combat.combatants.length, 0);
+    assert.equal(saved.dmWorkspace.map.participants[0].sourceId, characterId);
+    assert.equal(saved.dmWorkspace.map.tokens[0].combatantId, "explorer");
+    return { dmWorkspace: saved.dmWorkspace, workspaceRevision: 1 };
+  });
+  for (const legacy of [false, true]) {
+    const workspace = doc.dmWorkspace.toObject();
+    if (legacy) delete workspace.map.participants;
+    const res = response();
+    await save(request(workspace), res);
+    assert.equal(res.statusCode, 200);
+  }
+});

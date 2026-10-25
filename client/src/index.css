@@ -3339,6 +3339,48 @@ button {
   flex-wrap: wrap;
   gap: 7px;
 }
+.dm-map-editor .section-heading > div {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+.dm-map-scene-name {
+  overflow-wrap: anywhere;
+}
+.dm-map-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  align-items: end;
+  gap: 14px;
+  margin: 22px 0;
+}
+.dm-map-settings > .form-field {
+  min-width: 0;
+}
+.dm-map-name-field {
+  grid-column: 1 / -1;
+}
+.dm-map-token-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin: 22px 0 12px;
+}
+.dm-map-token-controls > .form-field {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.dm-map-token-controls > .button {
+  flex: 1 1 auto;
+}
+.dm-map-editor .dm-legend-item {
+  max-width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.dm-map-editor .dm-token {
+  flex-shrink: 0;
+}
 .dm-map-scroll {
   overflow: auto;
   max-height: 650px;

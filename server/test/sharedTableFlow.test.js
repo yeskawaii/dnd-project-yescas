@@ -96,7 +96,7 @@ test("authenticated DM publishes, players receive individual views, and revocati
   assert.equal((await request(app, "GET", `${baseUrl}/table?characterId=${firstCharacter}`, firstUser)).status, 403);
 });
 
-test("authenticated players move their own tokens, everyone sees the result, and the DM retains control", async (context) => {
+for (const exploration of [false, true]) test(`authenticated players move their own tokens ${exploration ? "without a combat" : "in combat"}, everyone sees the result, and the DM retains control`, async (context) => {
   const oldKey = process.env.JWT_SECRET;
   process.env.JWT_SECRET = signingKey;
   context.after(() => { if (oldKey === undefined) delete process.env.JWT_SECRET; else process.env.JWT_SECRET = oldKey; });
@@ -105,7 +105,8 @@ test("authenticated players move their own tokens, everyone sees the result, and
   let stored = new Campaign({ _id: campaignId, dm, name: "El puente", inviteCode: "BRIDGE", workspaceRevision: 1 });
   stored.dmWorkspace.presentation.enabled = true;
   stored.dmWorkspace.presentation.shareMap = true;
-  stored.dmWorkspace.combat.combatants.push(
+  const participants = exploration ? stored.dmWorkspace.map.participants : stored.dmWorkspace.combat.combatants;
+  participants.push(
     { id: "lyra", sourceId: firstCharacter, name: "Lyra", kind: "player" },
     { id: "eldrin", sourceId: secondCharacter, name: "Eldrin", kind: "player" },
   );
@@ -139,6 +140,11 @@ test("authenticated players move their own tokens, everyone sees the result, and
   const moved = await request(app, "PATCH", `${url}/table/token`, firstUser, move);
   assert.equal(moved.status, 200);
   assert.equal(moved.body.revision, 2);
+  if (exploration) {
+    assert.equal(moved.body.combat.combatants.length, 0);
+    assert.deepEqual(moved.body.map.participants.map((entry) => entry.name), ["Lyra", "Eldrin"]);
+    assert.equal(moved.body.combat.activeId, "");
+  }
   const otherView = await request(app, "GET", `${url}/table?characterId=${secondCharacter}`, secondUser);
   assert.deepEqual(otherView.body.map.tokens.find((token) => token.combatantId === "lyra"), { combatantId: "lyra", x: 4, y: 4 });
   assert.deepEqual(otherView.body.map.movableTokenIds, ["eldrin"]);

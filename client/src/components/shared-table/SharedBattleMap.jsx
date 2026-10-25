@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import TacticalGrid from "./TacticalGrid";
 
-export default function SharedBattleMap({ map, combatants, activeId, onMoveToken }) {
+export default function SharedBattleMap({ map, combatants: encounterCombatants, activeId, onMoveToken }) {
+  const combatants = map.participants || encounterCombatants;
   const [selected, setSelected] = useState("");
   const [moving, setMoving] = useState(false);
   const [error, setError] = useState("");

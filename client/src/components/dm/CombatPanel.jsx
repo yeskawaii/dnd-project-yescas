@@ -388,7 +388,8 @@ export default function CombatPanel({
                     activeId: "",
                     combatants: [],
                   },
-                  map: { ...workspace.map, tokens: [] },
+                  map: { ...workspace.map, tokens: workspace.map.tokens.filter((token) =>
+                    !combat.combatants.some((entry) => entry.id === token.combatantId)) },
                 }),
             )
           }
