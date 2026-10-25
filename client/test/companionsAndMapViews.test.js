@@ -5,19 +5,21 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 
 let vite;
-let CompanionsTab, PartyCompanions, BattleMap, SharedBattleMap;
+let CompanionsTab, PartyCompanions, BattleMap, SharedBattleMap, MapTokenChoice;
 const noop = () => {};
 const companion = { _id: "c1", name: "Nimbo", kind: "homunculus", hp: { current: 4, max: 12 }, ac: 16, initiativeBonus: 3, active: true, speed: "20 ft", duration: "Permanente", actions: "Mordisco +3, 1d4", description: "<script>private</script>" };
 const player = { _id: "p1", name: "Lyra", companions: [companion] };
 const map = { name: "Bosque", gridType: "hex", feetPerCell: 10, width: 8, height: 8, cells: [{ x: 2, y: 3, terrain: "water" }], tokens: [{ combatantId: "ally1", x: 3, y: 4 }] };
 const combatants = [{ id: "ally1", sourceId: "p1:c1", name: "Nimbo", kind: "ally" }];
 const render = (component, props) => renderToStaticMarkup(createElement(component, props));
+const portrait = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=";
 before(async () => {
   vite = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: "custom" });
   CompanionsTab = (await vite.ssrLoadModule("/src/components/character-sheet/CompanionsTab.jsx")).default;
   PartyCompanions = (await vite.ssrLoadModule("/src/components/dm/PartyCompanions.jsx")).default;
   BattleMap = (await vite.ssrLoadModule("/src/components/dm/BattleMap.jsx")).default;
   SharedBattleMap = (await vite.ssrLoadModule("/src/components/shared-table/SharedBattleMap.jsx")).default;
+  MapTokenChoice = (await vite.ssrLoadModule("/src/components/shared-table/MapTokenChoice.jsx")).default;
 });
 after(async () => { await vite?.close(); });
 
@@ -165,4 +167,47 @@ test("an empty shared map explains missing visible data and offers a refresh", (
   assert.ok(html.includes("No se recibieron fichas visibles"));
   assert.ok(html.includes("Actualizar fichas"));
   assert.ok(!html.includes("selected-token"));
+});
+
+test("DM and player maps render the chosen portrait in round tokens and legends while preserving selection and turn markers", () => {
+  const lyra = { id: "lyra", sourceId: "p1", name: "Lyra", kind: "player", icon: "moon", portrait };
+  for (const gridType of ["hex", "square"]) {
+    const portraitMap = { ...map, gridType, participants: [lyra], movableTokenIds: ["lyra"],
+      tokens: [{ combatantId: "lyra", x: 1, y: 1 }] };
+    for (const html of [
+      render(SharedBattleMap, { map: portraitMap, combatants: [], activeId: "lyra", onMoveToken: noop }),
+      render(BattleMap, { map: portraitMap, combatants: [lyra], players: [{ ...player,
+        appearance: { emblem: "moon", portrait, mapTokenStyle: "portrait" } }], activeId: "lyra", onChange: noop, onDelete: noop }),
+    ]) {
+      assert.ok(html.includes(`<image href="${portrait}"`));
+      assert.ok(html.includes(`<img src="${portrait}"`));
+      const clipId = html.match(/<clipPath id="([^"]+)"/)[1];
+      assert.ok(html.includes(`clip-path="url(#${clipId})"`));
+      assert.ok(html.includes('preserveAspectRatio="xMidYMid slice"'));
+      assert.ok(html.includes("current-turn"));
+      assert.ok(html.includes("selected-token"));
+    }
+    // A live switch to an icon must override an older portrait in the DM roster.
+    const switched = render(BattleMap, { map: portraitMap, combatants: [lyra], players: [{ ...player,
+      appearance: { portrait, mapTokenStyle: "portrait" } }], tokenIcons: { lyra: "bow" }, tokenPortraits: {}, onChange: noop, onDelete: noop });
+    assert.ok(!switched.includes("<image"));
+    assert.ok(!switched.includes("<img"));
+    assert.ok(switched.includes('data-token-icon="bow"'));
+  }
+});
+
+test("portrait controls explain uploads and preserve an explicit icon choice even with an uploaded image", () => {
+  const empty = render(MapTokenChoice, { appearance: {}, onChange: noop });
+  assert.ok(empty.includes("Tu retrato para usarla en el mapa"));
+  assert.match(empty, /disabled=""[\s\S]*?Retrato<\/button>/);
+  const chosen = render(MapTokenChoice, { appearance: { portrait, emblem: "moon", mapTokenStyle: "portrait" }, onChange: noop });
+  assert.match(chosen, /aria-pressed="true"[\s\S]*?Retrato<\/button>/);
+  const icon = render(MapTokenChoice, { appearance: { portrait, mapTokenStyle: "icon" }, onChange: noop });
+  assert.match(icon, /aria-pressed="true"[\s\S]*?Icono<\/button>/);
+  for (const source of ["javascript:unsafe()", "https://example.com/private.jpg", "data:image/svg+xml;base64,PHN2Zz4="]) {
+    const html = render(SharedBattleMap, { map: { ...map, participants: [{ id: "ally1", name: "Lyra", kind: "player", portrait: source }] }, combatants: [] });
+    assert.ok(!html.includes(source));
+    assert.ok(!html.includes("<image"));
+    assert.ok(html.includes('data-token-icon="sword"'));
+  }
 });

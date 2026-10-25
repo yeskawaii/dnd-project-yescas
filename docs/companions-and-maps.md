@@ -65,6 +65,12 @@ los valores existentes.
 
 ### Movimiento de los jugadores
 
+En **Personalizar mi personaje → Ficha en el mapa**, cada personaje puede elegir
+su emblema o el retrato que haya subido y recortado. La elección también está
+disponible desde la mesa compartida para el personaje abierto. Se sincroniza
+con el DM y el grupo sin retirar ni volver a colocar fichas; cambiar a icono
+conserva el retrato. La niebla oculta también los datos de imagen de sus fichas.
+
 Con la mesa y el mapa compartidos, cada jugador puede mover las fichas de todos
 sus personajes inscritos en esa campaña desde **Partida → Mesa compartida**,
 incluso sin un combate y sin cambiar de personaje. El DM primero debe colocar

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { cellCenter, cellPolygon, mapBounds, tokenViewport } from "../../utils/mapGeometry";
-import Icon from "../ui/Icon";
-import { tokenIcon } from "../../../../shared/mapTokens.mjs";
+import TokenVisual from "./TokenVisual";
+import { tokenPortrait } from "../../../../shared/mapTokens.mjs";
 
 const symbols = { wall: "▧", water: "≈", door: "▥", fog: "?" };
 const terrainNames = { wall: "muro", water: "agua", door: "puerta", fog: "niebla" };
@@ -75,8 +75,8 @@ export default function TacticalGrid({ map, combatants, activeId, selectedId, on
             <title>{label}</title>
             <polygon points={cellPolygon(map, x, y)} />
             {actor ? <><circle className={`tactical-token ${actor.kind}`} cx={center.x} cy={center.y} r={16} />
-              <Icon name={tokenIcon(actor)} x={center.x - 10} y={center.y - 10} size={20}
-                className="tactical-token-icon" data-token-icon={tokenIcon(actor)} /></>
+              <TokenVisual entry={actor} x={center.x - (tokenPortrait(actor) ? 15 : 10)}
+                y={center.y - (tokenPortrait(actor) ? 15 : 10)} size={tokenPortrait(actor) ? 30 : 20} svg /></>
               : <text x={center.x} y={center.y} className="tactical-terrain">{symbols[terrain]}</text>}
           </g>;
         })}

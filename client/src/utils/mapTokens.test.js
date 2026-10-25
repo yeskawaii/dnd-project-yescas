@@ -1,9 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sharedMapParticipants, tokenIcon } from "../../../shared/mapTokens.mjs";
+import { characterTokenVisual, sharedMapParticipants, tokenIcon, tokenPortrait } from "../../../shared/mapTokens.mjs";
 
 const lyra = { id: "lyra", name: "Lyra", kind: "player" };
 const nimbo = { id: "nimbo", name: "Nimbo", kind: "ally", icon: "wing" };
+const portrait = "data:image/png;base64,aGVsbG8=";
+
+test("portraits require an explicit character preference and accept only bounded uploaded raster data", () => {
+  assert.deepEqual(characterTokenVisual(), { icon: "sword", portrait: "" });
+  assert.equal(characterTokenVisual({ portrait }).portrait, "");
+  assert.equal(characterTokenVisual({ portrait, mapTokenStyle: "icon" }).portrait, "");
+  assert.deepEqual(characterTokenVisual({ emblem: "moon", portrait, mapTokenStyle: "portrait" }), { icon: "moon", portrait });
+  assert.equal(tokenPortrait({ ...lyra, portrait }), portrait);
+  assert.equal(tokenPortrait({ ...nimbo, portrait }), "");
+  for (const source of ["https://example.com/photo.jpg", "javascript:alert(1)", "data:image/svg+xml;base64,PHN2Zz4=", `data:image/png;base64,${"A".repeat(240000)}`, null]) {
+    assert.equal(characterTokenVisual({ portrait: source, mapTokenStyle: "portrait" }).portrait, "");
+    assert.equal(tokenPortrait({ ...lyra, portrait: source }), "");
+  }
+});
 
 test("an empty or partial map roster never discards placed encounter characters", () => {
   for (const participants of [undefined, [], [nimbo]]) {

@@ -4,6 +4,7 @@ import TacticalGrid from "../shared-table/TacticalGrid";
 import TokenBadge from "../shared-table/TokenBadge";
 import { cellDistance } from "../../utils/mapGeometry";
 import { mapRoster, placeMapToken, placePartyOnMap, resizeMap } from "../../utils/dmWorkspace";
+import { characterTokenVisual } from "../../../../shared/mapTokens.mjs";
 
 const tools = {
   token: "Colocar o mover ficha",
@@ -21,6 +22,7 @@ export default function BattleMap({
   onRefreshPlayers,
   refreshing,
   tokenIcons = {},
+  tokenPortraits = {},
   activeId,
   onChange,
   onDelete,
@@ -32,8 +34,12 @@ export default function BattleMap({
   const paintMap = useRef(map);
   useEffect(() => { paintMap.current = map; }, [map]);
   const roster = mapRoster(map, combatants, players);
-  const visualRoster = roster.map((entry) => ({ ...entry, icon: tokenIcons[entry.id] ||
-    (entry.kind === "player" ? players.find((player) => player._id === entry.sourceId)?.appearance?.emblem : undefined) }));
+  const visualRoster = roster.map((entry) => {
+    const visual = entry.kind === "player"
+      ? characterTokenVisual(players.find((player) => player._id === entry.sourceId)?.appearance) : {};
+    return { ...entry, icon: tokenIcons[entry.id] || visual.icon,
+      portrait: Object.hasOwn(tokenIcons, entry.id) ? tokenPortraits[entry.id] : visual.portrait };
+  });
   const selectedId = roster.some((entry) => entry.id === selected)
     ? selected
     : roster.find((entry) => entry.kind === "player")?.id || roster[0]?.id || "";

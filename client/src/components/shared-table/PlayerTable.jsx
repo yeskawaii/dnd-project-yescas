@@ -52,6 +52,11 @@ export default function PlayerTable({ character, table, onUpdate }) {
         </section>
       )}
       {data?.map && <SharedBattleMap map={data.map} combatants={data.combat?.combatants || []} activeId={data.combat?.activeId} onMoveToken={table.moveToken}
+        onChangeTokenStyle={onUpdate ? async (style) => {
+          const saved = await onUpdate({ "appearance.mapTokenStyle": style });
+          if (saved) refresh();
+          return saved;
+        } : undefined}
         character={character} onRefresh={refresh} onChangeIcon={onUpdate ? async (icon) => {
           const saved = await onUpdate({ "appearance.emblem": icon });
           if (saved) refresh();

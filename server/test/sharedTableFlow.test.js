@@ -214,7 +214,7 @@ test("a player's saved icon reaches phone, desktop, other players and the DM wit
       assert.equal(fields, "_id");
       return [...characters.values()].filter((entry) => String(entry.user) === query.user && String(entry.campaign) === query.campaign);
     }
-    assert.equal(fields, "_id appearance.emblem");
+    assert.equal(fields, "_id appearance.emblem appearance.portrait appearance.mapTokenStyle");
     return query._id.$in.map((id) => characters.get(String(id))).filter(Boolean);
   } }));
   context.mock.method(Character, "findOneAndUpdate", (query, update) => ({ populate: async () => {
@@ -256,4 +256,40 @@ test("a player's saved icon reaches phone, desktop, other players and the DM wit
   assert.equal(dmView.body.tokenIcons.lyra, "moon");
   assert.equal(dmView.body.tokenIcons.eldrin, "magic");
   assert.equal(dmView.body.revision, 3);
+  const portrait = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=";
+  const savePortrait = await request(app, "PATCH", `/api/character/${firstCharacter}/update`, firstUser, { "appearance.portrait": portrait });
+  assert.equal(savePortrait.status, 200);
+  const iconView = await read(firstUser, firstCharacter, "Mobile Safari");
+  assert.equal(iconView.body.map.participants.find((entry) => entry.id === "lyra").portrait, undefined);
+  assert.equal((await request(app, "PATCH", `/api/character/${firstCharacter}/update`, secondUser, { "appearance.mapTokenStyle": "portrait" })).status, 404);
+  const choosePortrait = await request(app, "PATCH", `/api/character/${firstCharacter}/update`, firstUser, { "appearance.mapTokenStyle": "portrait" });
+  assert.equal(choosePortrait.status, 200);
+  assert.equal(choosePortrait.body.appearance.mapTokenStyle, "portrait");
+  for (const [user, id, agent] of [[firstUser, firstCharacter, "Mobile Safari"], [secondUser, secondCharacter, "Desktop Chrome"]]) {
+    const updated = await read(user, id, agent);
+    assert.equal(updated.status, 200);
+    assert.equal(updated.body.map.participants.find((entry) => entry.id === "lyra").portrait, portrait);
+    assert.equal(updated.body.map.participants.find((entry) => entry.id === "lyra").icon, "moon");
+    assert.deepEqual(updated.body.map.tokens, desktop.body.map.tokens);
+    assert.equal(updated.body.revision, 3);
+  }
+  const dmPortrait = await request(app, "GET", `${url}/workspace`, dm);
+  assert.equal(dmPortrait.body.tokenPortraits.lyra, portrait);
+  assert.equal(dmPortrait.body.tokenIcons.lyra, "moon");
+  stored.dmWorkspace.map.cells.push({ x: 1, y: 1, terrain: "fog" });
+  const fogged = await read(firstUser, firstCharacter, "Mobile Safari");
+  assert.ok(!JSON.stringify(fogged.body).includes(portrait), "Fog must also hide the portrait data");
+  stored.dmWorkspace.map.cells = [];
+  const chooseIcon = await request(app, "PATCH", `/api/character/${firstCharacter}/update`, firstUser, { "appearance.mapTokenStyle": "icon" });
+  assert.equal(chooseIcon.status, 200);
+  assert.equal(chooseIcon.body.appearance.portrait, portrait, "Switching to an icon keeps the uploaded portrait");
+  const reverted = await read(firstUser, firstCharacter, "Mobile Safari");
+  assert.ok(!JSON.stringify(reverted.body).includes(portrait));
+  assert.deepEqual((await request(app, "GET", `${url}/workspace`, dm)).body.tokenPortraits, {});
+  assert.equal((await request(app, "PATCH", `/api/character/${firstCharacter}/update`, firstUser, {
+    "appearance.mapTokenStyle": "portrait", "appearance.portrait": "",
+  })).status, 200);
+  const noPortrait = await read(firstUser, firstCharacter, "Mobile Safari");
+  assert.equal(noPortrait.body.map.participants.find((entry) => entry.id === "lyra").icon, "moon");
+  assert.equal(noPortrait.body.map.participants.find((entry) => entry.id === "lyra").portrait, undefined);
 });

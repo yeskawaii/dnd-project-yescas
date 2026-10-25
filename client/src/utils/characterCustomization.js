@@ -135,6 +135,7 @@ export const defaultAppearance = {
   backdrop: "mist",
   frame: "shield",
   emblem: "sword",
+  mapTokenStyle: "icon",
   portrait: "",
 };
 export function getAppearance(character) {
@@ -152,6 +153,7 @@ export function getAppearance(character) {
     emblem: characterIcons.some(([id]) => id === input.emblem)
       ? input.emblem
       : "sword",
+    mapTokenStyle: input.mapTokenStyle === "portrait" ? "portrait" : "icon",
     portrait:
       typeof input.portrait === "string" &&
       /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(

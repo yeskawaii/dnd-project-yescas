@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import TacticalGrid from "./TacticalGrid";
 import TokenBadge from "./TokenBadge";
+import MapTokenChoice from "./MapTokenChoice";
 import IconPicker from "../ui/IconPicker";
 import Icon from "../ui/Icon";
 import { sharedMapParticipants } from "../../../../shared/mapTokens.mjs";
 
-export default function SharedBattleMap({ map, combatants: encounterCombatants, activeId, onMoveToken, character, onChangeIcon, onRefresh }) {
+export default function SharedBattleMap({ map, combatants: encounterCombatants, activeId, onMoveToken, character, onChangeIcon, onChangeTokenStyle, onRefresh }) {
   const combatants = sharedMapParticipants(map, encounterCombatants);
   const [selected, setSelected] = useState("");
   const [moving, setMoving] = useState(false);
@@ -18,17 +19,17 @@ export default function SharedBattleMap({ map, combatants: encounterCombatants, 
   const placed = map.tokens.filter((token) => actors.has(token.combatantId));
   const owned = onMoveToken ? placed.filter((token) => map.movableTokenIds?.includes(token.combatantId)) : [];
   const selectedId = owned.some((token) => token.combatantId === selected) ? selected : owned[0]?.combatantId;
-  const changeIcon = async (icon) => {
+  const saveVisual = async (save) => {
     if (iconLock.current) return;
     iconLock.current = true;
     setSavingIcon(true);
     setError("");
     try {
-      const saved = await onChangeIcon(icon);
-      if (!saved) throw new Error("No se guardó el icono. Inténtalo de nuevo.");
+      const saved = await save();
+      if (!saved) throw new Error("No se guardó la apariencia de la ficha. Inténtalo de nuevo.");
       setChoosingIcon(false);
     } catch (error) {
-      setError(error.response?.data?.error || error.message || "No se pudo guardar el icono.");
+      setError(error.response?.data?.error || error.message || "No se pudo guardar la apariencia de la ficha.");
     } finally {
       iconLock.current = false;
       setSavingIcon(false);
@@ -75,6 +76,11 @@ export default function SharedBattleMap({ map, combatants: encounterCombatants, 
         <p className="helper-text" role="status">{moving ? "Moviendo ficha…" : "Movimiento libre según lo acordado con el DM; no se descuenta velocidad ni se limita por turno."}</p>
       </>}
       {error && <p className="table-error" role="alert">{error}</p>}
+      {onChangeTokenStyle && <div className="map-icon-choice">
+        <p className="helper-text">Apariencia de {character?.name || "tu personaje abierto"}</p>
+        <MapTokenChoice appearance={character?.appearance} disabled={savingIcon}
+          onChange={(style) => saveVisual(() => onChangeTokenStyle(style))} />
+      </div>}
       {onChangeIcon && <div className="map-icon-choice">
         <button className="button secondary compact" disabled={savingIcon}
           aria-expanded={choosingIcon} onClick={() => setChoosingIcon((value) => !value)}>
@@ -83,7 +89,7 @@ export default function SharedBattleMap({ map, combatants: encounterCombatants, 
         {choosingIcon && <>
           <p className="helper-text">Tu emblema identifica a {character?.name || "tu personaje"} en el mapa y en su ficha. Lo ve todo el grupo.</p>
           <IconPicker label="Icono de tu personaje" value={character?.appearance?.emblem || "sword"}
-            disabled={savingIcon} onChange={changeIcon} />
+            disabled={savingIcon} onChange={(icon) => saveVisual(() => onChangeIcon(icon))} />
         </>}
       </div>}
       <TacticalGrid map={map} combatants={combatants} activeId={activeId} selectedId={selectedId}

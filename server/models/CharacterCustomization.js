@@ -32,6 +32,7 @@ export const appearanceSchema = new mongoose.Schema(
       required: true,
     },
     emblem: { ...visualIcon(), default: "sword", required: true },
+    mapTokenStyle: { type: String, enum: ["icon", "portrait"], default: "icon", required: true },
     portrait: {
       type: String,
       default: "",

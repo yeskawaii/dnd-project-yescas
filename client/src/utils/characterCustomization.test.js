@@ -15,6 +15,7 @@ test("legacy and malformed appearance data use safe, usable defaults", () => {
     backdrop: "mist",
     frame: "shield",
     emblem: "sword",
+    mapTokenStyle: "icon",
     portrait: "",
   });
   const appearance = getAppearance({
@@ -23,11 +24,13 @@ test("legacy and malformed appearance data use safe, usable defaults", () => {
       backdrop: "bogus",
       frame: "bogus",
       emblem: "bogus",
+      mapTokenStyle: "bogus",
       portrait: "javascript:unsafe()",
     },
   });
   assert.equal(appearance.theme, "forest");
   assert.equal(appearance.portrait, "");
+  assert.equal(appearance.mapTokenStyle, "icon");
   assert.equal(appearanceStyle({ theme: "arcane" })["--mint"], "#d7b9fb");
 });
 

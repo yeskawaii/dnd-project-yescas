@@ -4,6 +4,7 @@ import CharacterAvatar from "../ui/CharacterAvatar";
 import Icon from "../ui/Icon";
 import IconPicker from "../ui/IconPicker";
 import ThemePicker from "../ui/ThemePicker";
+import MapTokenChoice from "../shared-table/MapTokenChoice";
 import {
   appearanceStyle,
   defaultAppearance,
@@ -249,6 +250,7 @@ export default function CustomizationSheet({ character, onUpdate, onClose }) {
                   </div>
                 )}
               </section>
+              <MapTokenChoice appearance={appearance} onChange={(value) => update("mapTokenStyle", value)} />
               <section className="customization-section">
                 <h3>Tu paleta</h3>
                 <ThemePicker

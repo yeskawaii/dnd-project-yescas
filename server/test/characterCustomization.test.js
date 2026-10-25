@@ -16,6 +16,7 @@ test("legacy sheets receive independent appearance and play layout defaults", as
   await first.validate();
   assert.equal(first.appearance.theme, "forest");
   assert.equal(first.appearance.portrait, "");
+  assert.equal(first.appearance.mapTokenStyle, "icon");
   assert.deepEqual(first.playLayout.order.toObject(), defaultOrder);
   first.playLayout.order.reverse();
   first.appearance.theme = "arcane";
@@ -41,6 +42,7 @@ test("portraits, layout and resource icons survive serialization without changin
       frame: "rune",
       emblem: "leaf",
       portrait,
+      mapTokenStyle: "portrait",
     },
     playLayout: {
       order: ["favorites", "vitals", "shortcuts", "defenses"],
@@ -88,6 +90,7 @@ test("appearance rejects unsupported themes, remote or active image sources and 
     { theme: "unknown" },
     { frame: "unknown" },
     { backdrop: "unknown" },
+    { mapTokenStyle: "unknown" },
     { portrait: "https://example.com/image.jpg" },
     { portrait: "data:image/svg+xml;base64,PHN2Zz4=" },
     { portrait: "javascript:alert(1)" },
