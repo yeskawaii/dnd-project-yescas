@@ -92,7 +92,7 @@ function App() {
       <AppUpdateNotice update={appUpdate} />
 
       {mode === "lobby" && (
-        <Lobby onSelectMode={setMode} logout={handleLogout} />
+        <Lobby onSelectMode={setMode} logout={handleLogout} onRefreshApp={appUpdate.force} />
       )}
       {mode === "dm" && (
         <Suspense fallback={<p className="helper-text" role="status">Abriendo la mesa del DM…</p>}>

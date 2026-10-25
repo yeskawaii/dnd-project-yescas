@@ -1,6 +1,6 @@
 import Icon from "../components/ui/Icon";
 
-export default function Lobby({ onSelectMode, logout }) {
+export default function Lobby({ onSelectMode, logout, onRefreshApp }) {
   return (
     <div className="entry-page">
       <header className="entry-topbar">
@@ -49,6 +49,9 @@ export default function Lobby({ onSelectMode, logout }) {
         <Icon name="dice" size={15} />
         Hecho para jugar D&D 3.5, estés donde estés.
       </p>
+      <button className="app-refresh-button" onClick={onRefreshApp}>
+        <Icon name="undo" size={16} />Actualizar app
+      </button>
     </div>
   );
 }

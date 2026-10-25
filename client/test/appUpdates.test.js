@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 
-let vite, api, state, AppUpdateNotice;
+let vite, api, state, AppUpdateNotice, Lobby;
 const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
 before(async () => {
   globalThis.localStorage = { getItem: () => null };
@@ -12,6 +12,7 @@ before(async () => {
   api = (await vite.ssrLoadModule("/src/api/axios.js")).default;
   state = await vite.ssrLoadModule("/src/utils/appUpdate.js");
   AppUpdateNotice = (await vite.ssrLoadModule("/src/components/ui/AppUpdateNotice.jsx")).default;
+  Lobby = (await vite.ssrLoadModule("/src/pages/Lobby.jsx")).default;
 });
 after(async () => { await vite?.close(); delete globalThis.localStorage; });
 
@@ -45,13 +46,20 @@ test("normal table polling does not postpone a version update", async () => {
   await pending;
 });
 
-test("manual repair is always accessible and a new version explains the automatic reload", () => {
+test("the global notice stays hidden when the app is current and explains a pending update", () => {
   const current = renderToStaticMarkup(createElement(AppUpdateNotice, { update: { available: null, force: () => {} } }));
-  assert.ok(current.includes("Actualizar app"));
-  assert.ok(!current.includes("Hay una nueva versión"));
+  assert.equal(current, "");
   const html = renderToStaticMarkup(createElement(AppUpdateNotice, { update: { available: "release-b", force: () => {} } }));
   assert.ok(html.includes('role="status"'));
   assert.ok(html.includes("Hay una nueva versión"));
   assert.ok(html.includes("recargará automáticamente"));
   assert.ok(html.includes(">Forzar actualización</button>"));
+});
+
+test("the main hub keeps the manual app refresh available", () => {
+  const html = renderToStaticMarkup(createElement(Lobby, {
+    onSelectMode: () => {}, logout: () => {}, onRefreshApp: () => {},
+  }));
+  assert.ok(html.includes('class="app-refresh-button"'));
+  assert.ok(html.includes("Actualizar app"));
 });

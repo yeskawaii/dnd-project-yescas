@@ -10,8 +10,11 @@ segundos. Tocar continuamente la pantalla o dejar enfocado el selector de
 zoom ya no reinicia esa espera. La actualización automática espera si hay
 ediciones sin guardar, un editor abierto o peticiones de guardado en curso.
 
-El botón **Actualizar app** está siempre disponible; si hay una versión nueva
-se muestra **Forzar actualización**. Esta acción inicia la reparación incluso
+El botón manual **Actualizar app** está al pie del hub principal, sin flotar
+sobre las demás pantallas. No indica que haya una actualización pendiente.
+El aviso global con **Forzar actualización** solo aparece cuando el detector
+encuentra una versión diferente; si la app ya está al día, no muestra aviso.
+La acción manual inicia la reparación incluso
 si la versión parece ser la actual o hay un editor abierto. Espera únicamente
 si hay una petición de escritura en curso; al terminar, continúa sola. Las
 ediciones que aún no se hayan guardado pueden descartarse al forzar la recarga.
