@@ -11,5 +11,6 @@ RUN npm run build
 FROM nginx:alpine
 # Copiamos los archivos generados por Vite a la carpeta de Nginx
 COPY --from=build /app/client/dist /usr/share/nginx/html
+COPY client/nginx.cloudflare.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

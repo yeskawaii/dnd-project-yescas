@@ -120,7 +120,7 @@ export default function CharacterSheet({
 
   return (
     <CharacterThemeContext.Provider value={theme}>
-      <div className="character-app personalized-sheet" style={theme}>
+      <div className="character-app personalized-sheet" style={theme} data-app-update-blocked={saveState !== "saved"}>
         <SheetHeader
           character={character}
           onUpdate={handleUpdateCharacter}

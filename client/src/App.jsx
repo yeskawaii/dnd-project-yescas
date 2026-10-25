@@ -1,7 +1,10 @@
-import { lazy, Suspense, useEffect, useState, useContext } from "react";
+import { lazy, Suspense, useEffect, useState, useContext, useRef } from "react";
 import { AuthContext } from "./context/auth-context";
 import { Toaster, toast } from "sonner";
 import api from "./api/axios";
+import useAppUpdate from "./hooks/useAppUpdate";
+import { clearUpdateReturn, readUpdateReturn, saveUpdateReturn } from "./utils/appUpdate";
+import AppUpdateNotice from "./components/ui/AppUpdateNotice";
 
 // PÁGINAS PRINCIPALES
 import Login from "./pages/Login";
@@ -16,9 +19,16 @@ const DMDashboard = lazy(() => import("./pages/DMDashboard"));
 
 function App() {
   const { user, logout, loading } = useContext(AuthContext);
+  const userKey = user?.id || user?._id || user?.username;
+  const [returnTo] = useState(() => readUpdateReturn(userKey));
+  const restoredCharacter = useRef(false);
   const [characters, setCharacters] = useState([]);
   const [selectedChar, setSelectedChar] = useState(null);
-  const [mode, setMode] = useState("lobby"); // lobby | dm | player
+  const [mode, setMode] = useState(returnTo?.mode || "lobby"); // lobby | dm | player
+  const appUpdate = useAppUpdate(() => saveUpdateReturn({
+    user: userKey, mode, characterId: selectedChar?._id || (returnTo?.user === userKey ? returnTo.characterId : undefined),
+  }));
+  useEffect(() => { clearUpdateReturn(); }, []);
 
   // ESTADO GLOBAL MODAL DE BORRADO
   const [deleteAlert, setDeleteAlert] = useState({
@@ -46,7 +56,14 @@ function App() {
       api
         .get("/character")
         .then((res) => {
-          if (active) setCharacters(res.data.filter(Boolean));
+          if (active) {
+            const next = res.data.filter(Boolean);
+            setCharacters(next);
+            if (!restoredCharacter.current && returnTo?.user === userKey && returnTo.characterId) {
+              restoredCharacter.current = true;
+              setSelectedChar(next.find((character) => character._id === returnTo.characterId) || null);
+            }
+          }
         })
         .catch(() => {
           if (active) toast.error("No se pudieron cargar tus personajes");
@@ -55,7 +72,7 @@ function App() {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [user, userKey, returnTo]);
 
   if (loading) {
     return (
@@ -66,12 +83,13 @@ function App() {
   }
 
   if (!user) {
-    return <Login />;
+    return <><AppUpdateNotice update={appUpdate} /><Login /></>;
   }
 
   return (
     <div className="min-h-screen text-slate-100 font-sans relative overflow-x-hidden">
       <Toaster position="top-center" richColors theme="dark" />
+      <AppUpdateNotice update={appUpdate} />
 
       {mode === "lobby" && (
         <Lobby onSelectMode={setMode} logout={handleLogout} />

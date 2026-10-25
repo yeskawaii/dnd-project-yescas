@@ -240,7 +240,7 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack, onCustom
         )
       : onBack();
   return (
-    <div className="entry-page dm-dashboard dm-workspace">
+    <div className="entry-page dm-dashboard dm-workspace" data-app-update-blocked={dirty || saving}>
       <header className="entry-topbar">
         <button className="text-button" disabled={saving} onClick={leave}>
           <Icon name="back" size={18} />

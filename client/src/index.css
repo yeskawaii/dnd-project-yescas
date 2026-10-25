@@ -103,6 +103,25 @@ button {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+.app-update-notice {
+  position: fixed;
+  z-index: 60;
+  bottom: calc(100px + env(safe-area-inset-bottom));
+  right: 16px;
+  width: min(420px, calc(100% - 32px));
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--mint);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: 0 8px 32px #0006;
+  color: var(--text);
+  font-size: 13px;
+}
+.app-update-notice > div { flex: 1; min-width: 0; }
+.app-update-notice p { color: var(--muted); margin-top: 6px; line-height: 1.5; }
 .eyebrow {
   font-size: 10px;
   text-transform: uppercase;

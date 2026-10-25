@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { trackAppWrite, finishAppWrite } from '../utils/appUpdate';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "/api"
@@ -10,15 +11,18 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  trackAppWrite(config);
   return config;
 });
 
 // 2. EL CADENERO (Ya a prueba de bucles infinitos)
 api.interceptors.response.use(
   (response) => {
+    finishAppWrite(response.config);
     return response;
   },
   (error) => {
+    finishAppWrite(error.config);
     if (error.response && error.response.status === 401) {
       console.warn("Sesión caducada, limpiando caché...");
       
