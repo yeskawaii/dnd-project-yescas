@@ -95,3 +95,62 @@ test("authenticated DM publishes, players receive individual views, and revocati
   members.delete(firstCharacter);
   assert.equal((await request(app, "GET", `${baseUrl}/table?characterId=${firstCharacter}`, firstUser)).status, 403);
 });
+
+test("authenticated players move their own tokens, everyone sees the result, and the DM retains control", async (context) => {
+  const oldKey = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = signingKey;
+  context.after(() => { if (oldKey === undefined) delete process.env.JWT_SECRET; else process.env.JWT_SECRET = oldKey; });
+  const app = express();
+  app.use("/api/campaign", campaignRoutes);
+  let stored = new Campaign({ _id: campaignId, dm, name: "El puente", inviteCode: "BRIDGE", workspaceRevision: 1 });
+  stored.dmWorkspace.presentation.enabled = true;
+  stored.dmWorkspace.presentation.shareMap = true;
+  stored.dmWorkspace.combat.combatants.push(
+    { id: "lyra", sourceId: firstCharacter, name: "Lyra", kind: "player" },
+    { id: "eldrin", sourceId: secondCharacter, name: "Eldrin", kind: "player" },
+  );
+  stored.dmWorkspace.map.tokens.push({ combatantId: "lyra", x: 1, y: 1 }, { combatantId: "eldrin", x: 2, y: 2 });
+  const members = new Map([[firstCharacter, firstUser], [secondCharacter, secondUser]]);
+  context.mock.method(Character, "findOne", (query) => ({ select: async () =>
+    members.get(String(query._id)) === query.user && query.campaign === campaignId ? { _id: query._id } : null }));
+  context.mock.method(Campaign, "findById", async () => stored);
+  context.mock.method(Campaign, "findOneAndUpdate", async (filter, update, options) => {
+    if ((filter.workspaceRevision ?? 0) !== stored.workspaceRevision) return null;
+    if (update.$set.dmWorkspace) {
+      assert.equal(filter.dm, dm);
+      stored = new Campaign({ ...stored.toObject(), dmWorkspace: update.$set.dmWorkspace, workspaceRevision: stored.workspaceRevision + 1 });
+    } else {
+      const next = new Campaign(stored.toObject());
+      const token = next.dmWorkspace.map.tokens.find((entry) => entry.combatantId === options.arrayFilters[0]["token.combatantId"]);
+      token.x = update.$set["dmWorkspace.map.tokens.$[token].x"];
+      token.y = update.$set["dmWorkspace.map.tokens.$[token].y"];
+      next.workspaceRevision += 1;
+      stored = next;
+    }
+    await stored.validate();
+    return stored;
+  });
+  const url = `/api/campaign/${campaignId}`;
+  const move = { characterId: firstCharacter, combatantId: "lyra", x: 4, y: 4, revision: 1 };
+  const staleDMWorkspace = stored.dmWorkspace.toObject();
+  assert.equal((await request(app, "PATCH", `${url}/table/token`, null, move)).status, 401);
+  assert.equal((await request(app, "PATCH", `${url}/table/token`, secondUser, move)).status, 403);
+  assert.equal((await request(app, "PATCH", `${url}/table/token`, firstUser, { ...move, combatantId: "eldrin" })).status, 403);
+  const moved = await request(app, "PATCH", `${url}/table/token`, firstUser, move);
+  assert.equal(moved.status, 200);
+  assert.equal(moved.body.revision, 2);
+  const otherView = await request(app, "GET", `${url}/table?characterId=${secondCharacter}`, secondUser);
+  assert.deepEqual(otherView.body.map.tokens.find((token) => token.combatantId === "lyra"), { combatantId: "lyra", x: 4, y: 4 });
+  assert.deepEqual(otherView.body.map.movableTokenIds, ["eldrin"]);
+  assert.equal((await request(app, "GET", `${url}/workspace`, firstUser)).status, 403);
+  assert.equal((await request(app, "PUT", `${url}/workspace`, dm, { workspace: staleDMWorkspace, revision: 1 })).status, 409);
+  const latest = await request(app, "GET", `${url}/workspace`, dm);
+  assert.equal(latest.status, 200);
+  const workspace = latest.body.workspace;
+  workspace.map.tokens.find((token) => token.combatantId === "lyra").x = 6;
+  workspace.map.tokens.find((token) => token.combatantId === "eldrin").x = 7;
+  assert.equal((await request(app, "PUT", `${url}/workspace`, dm, { workspace, revision: latest.body.revision })).status, 200);
+  assert.deepEqual(stored.dmWorkspace.map.tokens.map((token) => token.x), [6, 7]);
+  members.delete(firstCharacter);
+  assert.equal((await request(app, "PATCH", `${url}/table/token`, firstUser, { ...move, revision: 3 })).status, 403);
+});

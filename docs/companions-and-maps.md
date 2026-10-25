@@ -49,3 +49,26 @@ el formato, la escala, el terreno y las posiciones se guardan con la mesa.
 La respuesta pública conserva el filtrado de criaturas ocultas y fichas bajo
 niebla. Los clientes antiguos que omitan formato o escala al guardar conservan
 los valores existentes.
+
+### Movimiento de los jugadores
+
+Con el combate y el mapa compartidos, cada jugador puede mover la ficha de su
+personaje desde **Partida → Mesa compartida**. El DM primero debe añadir ese
+personaje al encuentro y colocar su ficha fuera de la niebla. La ficha propia
+queda seleccionada: basta tocar una casilla libre, o usar flechas y Enter.
+El movimiento se guarda al momento; el resto del grupo y el DM reciben las
+posiciones automáticamente cada cuatro segundos.
+
+El servidor comprueba la cuenta dueña del personaje y su pertenencia actual a
+la campaña en cada movimiento. El jugador solo controla su ficha de personaje;
+las fichas ajenas, enemigos y acompañantes siguen bajo control del DM. No puede
+colocar ni retirar fichas, editar terreno ni entrar en casillas ocupadas, muros
+o niebla. Si su ficha queda bajo niebla, el DM debe volver a revelarla o moverla.
+El movimiento es libre según lo acordado con el DM: no valida rutas, velocidad
+ni turno activo.
+
+El DM conserva el movimiento de todas las fichas. Los movimientos entrantes se
+combinan con sus cambios pendientes sin borrar notas ni otros ajustes. Si el
+DM también mueve esa misma ficha, su cambio pendiente tiene prioridad al
+guardar. Los destinos que coincidan y otros cambios simultáneos de la mesa
+mantienen la protección de conflictos; no se sobrescriben automáticamente.

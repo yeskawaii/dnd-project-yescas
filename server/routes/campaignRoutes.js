@@ -147,7 +147,68 @@ router.get("/:id/table", protect, async (req, res) => {
   }
 });
 
-// Solo el DM puede leer (dashboard) y guardar su mesa, incluyendo los secretos.
+// Players send a position, never a workspace. Recheck ownership and sharing on every move.
+router.patch("/:id/table/token", protect, async (req, res) => {
+  res.set("Cache-Control", "private, no-store");
+  try {
+    const { characterId, combatantId, x, y, revision } = req.body ?? {};
+    if (!mongoose.isValidObjectId(req.params.id) ||
+        typeof characterId !== "string" || !mongoose.isValidObjectId(characterId) ||
+        typeof combatantId !== "string" || !combatantId || combatantId.length > 80 ||
+        !Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 ||
+        !Number.isInteger(revision) || revision < 0) {
+      return res.status(400).json({ message: "Movimiento inválido." });
+    }
+    const member = await Character.findOne({
+      _id: characterId, user: req.user._id || req.user, campaign: req.params.id,
+    }).select("_id");
+    if (!member) return res.status(403).json({ message: "Este personaje no tiene acceso a la contienda." });
+    const campaign = await Campaign.findById(req.params.id);
+    if (!campaign) return res.status(404).json({ message: "Contienda no encontrada" });
+    const view = playerTable(campaign, characterId);
+    if (!view.map?.movableTokenIds.includes(combatantId))
+      return res.status(403).json({ message: "Solo puedes mover tu propia ficha visible en el mapa compartido." });
+    if (revision !== (campaign.workspaceRevision || 0))
+      return res.status(409).json({ message: "El mapa cambió. Actualiza la mesa y vuelve a elegir el destino." });
+    const map = campaign.dmWorkspace.map;
+    if (x >= map.width || y >= map.height)
+      return res.status(400).json({ message: "El destino está fuera del mapa." });
+    if (map.cells.some((cell) => cell.x === x && cell.y === y && ["wall", "fog"].includes(cell.terrain)) ||
+        map.tokens.some((token) => token.x === x && token.y === y && token.combatantId !== combatantId))
+      return res.status(400).json({ message: "Ese destino no está disponible." });
+    const filter = { _id: campaign._id };
+    if (revision === 0) filter.$or = [{ workspaceRevision: 0 }, { workspaceRevision: { $exists: false } }];
+    else filter.workspaceRevision = revision;
+    const saved = await Campaign.findOneAndUpdate(filter, {
+      $set: {
+        "dmWorkspace.map.tokens.$[token].x": x,
+        "dmWorkspace.map.tokens.$[token].y": y,
+      },
+      $inc: { workspaceRevision: 1 },
+    }, { new: true, arrayFilters: [{ "token.combatantId": combatantId }] });
+    if (!saved) return res.status(409).json({ message: "El mapa cambió. Actualiza la mesa y vuelve a elegir el destino." });
+    res.json(playerTable(saved, characterId));
+  } catch {
+    res.status(500).json({ message: "No se pudo mover la ficha. Inténtalo de nuevo." });
+  }
+});
+
+// Solo el DM puede leer (dashboard) y guardar su mesa completa, incluyendo los secretos.
+router.get("/:id/workspace", protect, async (req, res) => {
+  res.set("Cache-Control", "private, no-store");
+  try {
+    if (!mongoose.isValidObjectId(req.params.id))
+      return res.status(400).json({ message: "Contienda inválida" });
+    const campaign = await Campaign.findById(req.params.id);
+    if (!campaign) return res.status(404).json({ message: "Contienda no encontrada" });
+    if (String(campaign.dm) !== String(req.user._id || req.user))
+      return res.status(403).json({ message: "Solo el DM puede leer esta mesa" });
+    res.json({ workspace: campaign.dmWorkspace, revision: campaign.workspaceRevision || 0 });
+  } catch {
+    res.status(500).json({ message: "No se pudo actualizar la mesa." });
+  }
+});
+
 router.put("/:id/workspace", protect, async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id))

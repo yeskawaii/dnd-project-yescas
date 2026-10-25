@@ -17,6 +17,7 @@ import {
   kindLabels,
   makeCombatant,
   makeCompanionCombatant,
+  mergeTokenUpdates,
   companionSourceId,
   newId,
 } from "../../utils/dmWorkspace";
@@ -39,6 +40,7 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [syncError, setSyncError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [undo, setUndo] = useState(null);
   const [editing, setEditing] = useState(null);
@@ -47,6 +49,7 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
   const [kind, setKind] = useState("all");
   const [partyFocus, setPartyFocus] = useState("");
   const saveLock = useRef(false);
+  const syncedWorkspace = useRef(workspace);
   useEffect(() => {
     if (!dirty) return;
     const warn = (event) => {
@@ -70,14 +73,32 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
     setSaving(true);
     setSaveError("");
     try {
-      const { data } = await api.put(`/campaign/${campaign._id}/workspace`, {
-        workspace: nextWorkspace,
-        revision,
-      }, { timeout: 15000 });
+      let pending = nextWorkspace;
+      let pendingRevision = revision;
+      let base = syncedWorkspace.current;
+      let data;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          ({ data } = await api.put(`/campaign/${campaign._id}/workspace`, {
+            workspace: pending, revision: pendingRevision,
+          }, { timeout: 15000 }));
+          break;
+        } catch (error) {
+          if (error.response?.status !== 409 || attempt === 2) throw error;
+          const { data: latest } = await api.get(`/campaign/${campaign._id}/workspace`, { timeout: 15000 });
+          const merged = mergeTokenUpdates(base, pending, latest.workspace);
+          if (!merged) throw error;
+          pending = merged;
+          pendingRevision = latest.revision;
+          base = latest.workspace;
+        }
+      }
+      syncedWorkspace.current = data.workspace;
       setWorkspace(data.workspace);
       setRevision(data.revision);
       setDirty(false);
       setUndo(null);
+      setSyncError("");
       if (!quiet) toast.success("Mesa guardada. La vista del grupo está actualizada.");
       return true;
     } catch (error) {
@@ -92,6 +113,55 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
       setSaving(false);
     }
   };
+  const receiveRemote = useEffectEvent((data) => {
+    if (saveLock.current || data.revision <= revision) return;
+    const next = dirty ? mergeTokenUpdates(syncedWorkspace.current, workspace, data.workspace) : data.workspace;
+    if (!next) {
+      setSyncError("La mesa cambió mientras editabas. Guarda para comprobar los cambios pendientes.");
+      return;
+    }
+    syncedWorkspace.current = data.workspace;
+    setWorkspace(next);
+    setRevision(data.revision);
+    setUndo(null);
+  });
+  useEffect(() => {
+    let stopped = false;
+    let timer;
+    let request;
+    let loading = false;
+    const update = async () => {
+      if (stopped || loading || document.visibilityState === "hidden") return;
+      loading = true;
+      request = new AbortController();
+      try {
+        const { data } = await api.get(`/campaign/${campaign._id}/workspace`, {
+          signal: request.signal, timeout: 15000,
+        });
+        if (!stopped) { setSyncError(""); receiveRemote(data); }
+      } catch {
+        if (!stopped && !request.signal.aborted)
+          setSyncError("No se pudieron actualizar los movimientos del grupo. Reintentando automáticamente…");
+      } finally {
+        loading = false;
+        if (!stopped) timer = window.setTimeout(update, 4000);
+      }
+    };
+    const resume = () => {
+      window.clearTimeout(timer);
+      if (document.visibilityState === "visible") update();
+    };
+    update();
+    document.addEventListener("visibilitychange", resume);
+    window.addEventListener("online", resume);
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+      request?.abort();
+      document.removeEventListener("visibilitychange", resume);
+      window.removeEventListener("online", resume);
+    };
+  }, [campaign._id]);
   const saveLiveTable = useEffectEvent(() => save(workspace, true));
   useEffect(() => {
     if (!dirty || saving || saveError || !workspace.presentation?.enabled) return;
@@ -234,6 +304,7 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
           {saveError} Tus cambios siguen en esta pantalla.
         </p>
       )}
+      {syncError && <p className="helper-text" role="status">{syncError}</p>}
       <nav className="dm-tabs" aria-label="Herramientas del Dungeon Master">
         {tabs.map(([id, icon, label]) => (
           <button

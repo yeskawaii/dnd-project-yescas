@@ -5,6 +5,7 @@ import {
   armorClass,
   emptyWorkspace,
   makeCombatant,
+  mergeTokenUpdates,
   orderedCombatants,
   removeCombatant,
   resizeMap,
@@ -149,4 +150,60 @@ test("companions of different characters have distinct sources and independent h
   assert.equal(snapshot.actions, companion.actions);
   snapshot.hp = -2;
   assert.equal(companion.hp.current, 4);
+});
+
+const positionedWorkspace = () => ({
+  ...emptyWorkspace(),
+  combat: { ...emptyWorkspace().combat, combatants: [{ id: "a" }, { id: "b" }] },
+  map: { ...emptyWorkspace().map, tokens: [{ combatantId: "a", x: 1, y: 1 }, { combatantId: "b", x: 2, y: 2 }] },
+});
+
+test("incoming player movement preserves pending DM notes and other token edits", () => {
+  const base = positionedWorkspace();
+  const local = structuredClone(base), remote = structuredClone(base);
+  local.notes = [{ id: "pending", title: "Sin guardar" }];
+  local.map.tokens[1].x = 6;
+  remote.map.tokens[0].x = 4;
+  const merged = mergeTokenUpdates(base, local, remote);
+  assert.deepEqual(merged.notes, local.notes);
+  assert.deepEqual(merged.map.tokens, [{ combatantId: "a", x: 4, y: 1 }, { combatantId: "b", x: 6, y: 2 }]);
+  assert.equal(base.map.tokens[0].x, 1);
+  assert.equal(local.map.tokens[0].x, 1);
+});
+
+test("the DM's own move or token removal takes priority over concurrent player movement", () => {
+  const base = positionedWorkspace();
+  const local = structuredClone(base), remote = structuredClone(base);
+  local.map.tokens[0].x = 6;
+  local.map.tokens.splice(1, 1);
+  remote.map.tokens[0].x = 4;
+  remote.map.tokens[1].x = 5;
+  assert.deepEqual(mergeTokenUpdates(base, local, remote).map.tokens, [{ combatantId: "a", x: 6, y: 1 }]);
+});
+
+test("rebasing respects map resizing and removing combatants, and rejects occupied destinations", () => {
+  const base = positionedWorkspace();
+  const local = structuredClone(base), remote = structuredClone(base);
+  local.map.width = 8;
+  remote.map.tokens[0].x = 10;
+  assert.deepEqual(mergeTokenUpdates(base, local, remote).map.tokens, [base.map.tokens[1]]);
+  local.combat.combatants = [{ id: "a" }];
+  assert.deepEqual(mergeTokenUpdates(base, local, remote).map.tokens, []);
+  local.combat.combatants = base.combat.combatants;
+  local.map.tokens[1] = { combatantId: "b", x: 4, y: 4 };
+  remote.map.tokens[0] = { combatantId: "a", x: 4, y: 4 };
+  assert.equal(mergeTokenUpdates(base, local, remote), null);
+});
+
+test("remote changes to combat, terrain or notes still trigger the workspace conflict guard", () => {
+  const base = positionedWorkspace();
+  for (const mutate of [
+    (remote) => { remote.combat.round += 1; },
+    (remote) => { remote.map.cells.push({ x: 3, y: 3, terrain: "wall" }); },
+    (remote) => { remote.notes.push({ id: "n", title: "Otra pestaña" }); },
+  ]) {
+    const remote = structuredClone(base);
+    mutate(remote);
+    assert.equal(mergeTokenUpdates(base, base, remote), null);
+  }
 });

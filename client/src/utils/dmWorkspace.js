@@ -96,6 +96,31 @@ export function resizeMap(map, width, height) {
   };
 }
 
+// Rebase incoming token moves without losing the DM's pending edits. Other remote
+// edits still require an explicit reload, as with the existing revision guard.
+export function mergeTokenUpdates(base, local, remote) {
+  const withoutTokens = (workspace) => ({ ...workspace, map: { ...workspace.map, tokens: [] } });
+  if (JSON.stringify(withoutTokens(base)) !== JSON.stringify(withoutTokens(remote))) return null;
+  const before = new Map(base.map.tokens.map((token) => [token.combatantId, token]));
+  const ours = new Map(local.map.tokens.map((token) => [token.combatantId, token]));
+  const theirs = new Map(remote.map.tokens.map((token) => [token.combatantId, token]));
+  const ids = new Set([...before.keys(), ...ours.keys(), ...theirs.keys()]);
+  const combatantIds = new Set(local.combat.combatants.map((entry) => entry.id));
+  const tokens = [];
+  const positions = new Set();
+  for (const id of ids) {
+    const previous = before.get(id), current = ours.get(id);
+    const changed = previous?.x !== current?.x || previous?.y !== current?.y || Boolean(previous) !== Boolean(current);
+    const token = changed ? current : theirs.get(id);
+    if (!token || !combatantIds.has(id) || token.x >= local.map.width || token.y >= local.map.height) continue;
+    const position = `${token.x}:${token.y}`;
+    if (positions.has(position)) return null;
+    positions.add(position);
+    tokens.push(token);
+  }
+  return { ...local, map: { ...local.map, tokens } };
+}
+
 // A stable, character-scoped reference prevents two owners' companions from colliding.
 export const companionSourceId = (player, companion) => `${player._id}:${companion._id}`;
 export function makeCompanionCombatant(player, companion, existing, id = newId()) {

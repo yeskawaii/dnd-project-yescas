@@ -26,6 +26,11 @@ export function playerTable(campaign, characterId) {
         .filter((token) => visibleIds.has(token.combatantId) && !fog.has(`${token.x}:${token.y}`))
         .map(({ combatantId, x, y }) => ({ combatantId, x, y })),
     };
+    // Only expose control of this character's placed, visible player tokens.
+    const owned = new Set(visible.filter((entry) => entry.kind === "player" &&
+      entry.sourceId === String(characterId)).map((entry) => entry.id));
+    map.movableTokenIds = map.tokens.filter((token) => owned.has(token.combatantId))
+      .map((token) => token.combatantId);
   }
   const activeScene = presentation?.activeScene;
   return {

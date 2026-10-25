@@ -51,7 +51,7 @@ export default function PlayerTable({ character, table }) {
           <p className="helper-text">La vida mostrada corresponde al encuentro que dirige el DM.</p>
         </section>
       )}
-      {data?.map && <SharedBattleMap map={data.map} combatants={data.combat.combatants} activeId={data.combat.activeId} />}
+      {data?.map && <SharedBattleMap map={data.map} combatants={data.combat.combatants} activeId={data.combat.activeId} onMoveToken={table.moveToken} />}
       {data && !data.enabled && !data.scene && (
         <div className="surface table-waiting"><Icon name="scene" size={32} /><h3>El telón está a punto de abrirse</h3>
           <p>Cuando el DM presente una escena o comparta el combate, aparecerá aquí automáticamente.</p></div>

@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../api/axios";
 
 export default function useSharedTable(campaignId, characterId) {
   const [snapshot, setSnapshot] = useState(null);
   const [retry, setRetry] = useState(0);
+  const moveLock = useRef(false);
   const scope = `${campaignId}:${characterId}`;
 
   useEffect(() => {
@@ -20,7 +21,9 @@ export default function useSharedTable(campaignId, characterId) {
         const { data } = await api.get(`/campaign/${campaignId}/table`, {
           params: { characterId }, signal: request.signal, timeout: 15000,
         });
-        if (!stopped) setSnapshot({ scope, data, error: "", updatedAt: Date.now() });
+        if (!stopped) setSnapshot((previous) =>
+          previous?.scope === scope && previous.data?.revision > data.revision ? previous :
+            { scope, data, error: "", updatedAt: Date.now() });
       } catch (error) {
         if (!stopped && !request.signal.aborted) {
           const denied = [403, 404].includes(error.response?.status);
@@ -52,10 +55,29 @@ export default function useSharedTable(campaignId, characterId) {
     };
   }, [campaignId, characterId, scope, retry]);
 
+  const moveToken = async (combatantId, x, y) => {
+    if (moveLock.current) return;
+    moveLock.current = true;
+    try {
+      const { data } = await api.patch(`/campaign/${campaignId}/table/token`, {
+        characterId, combatantId, x, y, revision: snapshot?.data?.revision,
+      }, { timeout: 15000 });
+      setSnapshot((previous) =>
+        previous?.scope === scope && previous.data?.revision > data.revision ? previous :
+          { scope, data, error: "", updatedAt: Date.now() });
+    } catch (error) {
+      setRetry((value) => value + 1);
+      throw error;
+    } finally {
+      moveLock.current = false;
+    }
+  };
+
   return {
     data: snapshot?.scope === scope ? snapshot.data : null,
     error: snapshot?.scope === scope ? snapshot.error : "",
     updatedAt: snapshot?.scope === scope ? snapshot.updatedAt : null,
     refresh: () => setRetry((value) => value + 1),
+    moveToken,
   };
 }

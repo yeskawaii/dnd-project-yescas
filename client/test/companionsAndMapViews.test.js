@@ -74,3 +74,21 @@ test("saved square maps retain four-sided cells when geometry fields are missing
   assert.ok(html.includes("5 ft por celda"));
   assert.ok([...html.matchAll(/<polygon points="([^"]+)"/g)].every((match) => match[1].split(" ").length === 4));
 });
+
+test("players get movement controls only for their own placed tokens in either map geometry", () => {
+  const players = [{ id: "mine", kind: "player", name: "Lyra" }, { id: "other", kind: "player", name: "Eldrin" }];
+  for (const gridType of ["hex", "square"]) {
+    const sharedMap = { ...map, gridType, movableTokenIds: ["mine"], tokens: [
+      { combatantId: "mine", x: 1, y: 1 }, { combatantId: "other", x: 2, y: 2 },
+    ] };
+    const html = render(SharedBattleMap, { map: sharedMap, combatants: players, onMoveToken: noop });
+    assert.ok(html.includes("Mueves a Lyra"));
+    assert.ok(html.includes("Tu ficha"));
+    assert.ok(html.includes("flechas y Enter"));
+    assert.ok(html.includes('role="button"'));
+    assert.match(html, /<span class="dm-legend-item"><span class="dm-token player">2<\/span>Eldrin<\/span>/);
+    const unplaced = render(SharedBattleMap, { map: { ...sharedMap, tokens: sharedMap.tokens.slice(1) }, combatants: players, onMoveToken: noop });
+    assert.ok(!unplaced.includes('role="button"'));
+    assert.ok(unplaced.includes("colocar tu ficha en una zona visible"));
+  }
+});

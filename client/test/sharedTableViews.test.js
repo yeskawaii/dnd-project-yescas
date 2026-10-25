@@ -47,6 +47,16 @@ test("waiting, connection failure and absent membership remain useful states", (
   assert.ok(absent.includes("Une este personaje a una contienda"));
 });
 
+test("the player's table connects its movement action to the shared map", () => {
+  const data = snapshot();
+  data.map.movableTokenIds = ["lyra"];
+  const html = renderToStaticMarkup(createElement(PlayerTable, {
+    character, table: { data, updatedAt: 1, error: "", refresh: noop, moveToken: noop },
+  }));
+  assert.ok(html.includes("Mueves a Lyra"));
+  assert.ok(html.includes("Tu ficha"));
+});
+
 test("cinematic prose is plain text, and a remote illustration does not send a referrer", () => {
   const html = renderToStaticMarkup(createElement(CinematicScene, { scene: { ...scene, title: "<script>unsafe()</script>", description: "<img src=x onerror=unsafe()>", imageUrl: "https://example.com/forest.jpg" } }));
   assert.ok(!html.includes("<script>"));
