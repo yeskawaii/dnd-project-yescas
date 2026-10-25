@@ -45,11 +45,13 @@ test("normal table polling does not postpone a version update", async () => {
   await pending;
 });
 
-test("the update notice is quiet on the current version and explains deferred updates", () => {
-  assert.equal(renderToStaticMarkup(createElement(AppUpdateNotice, { update: { available: null } })), "");
-  const html = renderToStaticMarkup(createElement(AppUpdateNotice, { update: { available: "release-b", apply: () => {} } }));
+test("manual repair is always accessible and a new version explains the automatic reload", () => {
+  const current = renderToStaticMarkup(createElement(AppUpdateNotice, { update: { available: null, force: () => {} } }));
+  assert.ok(current.includes("Actualizar app"));
+  assert.ok(!current.includes("Hay una nueva versión"));
+  const html = renderToStaticMarkup(createElement(AppUpdateNotice, { update: { available: "release-b", force: () => {} } }));
   assert.ok(html.includes('role="status"'));
   assert.ok(html.includes("Hay una nueva versión"));
-  assert.ok(html.includes("al terminar tus cambios"));
-  assert.ok(html.includes(">Actualizar</button>"));
+  assert.ok(html.includes("recargará automáticamente"));
+  assert.ok(html.includes(">Forzar actualización</button>"));
 });

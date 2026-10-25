@@ -13,10 +13,16 @@ export function updateUrl(href, version) {
   return url.href;
 }
 
+export function recoveryUrl(href, version) {
+  const url = new URL("/actualizar.html", href);
+  url.searchParams.set("__app_version", version);
+  url.searchParams.set("volver", updateUrl(href, version));
+  return url.href;
+}
+
 export function updateBlocked(document) {
   if (hasPendingAppWrites()) return true;
   if (document.querySelector('[data-app-update-blocked="true"], [role="dialog"]')) return true;
-  if (document.activeElement?.matches('input, textarea, select, [contenteditable="true"]')) return true;
   // A filled login/creation form also needs protection after focus moves away.
   return [...document.querySelectorAll("form input, form textarea")].some((input) => input.value !== input.defaultValue);
 }
@@ -39,28 +45,35 @@ export function clearUpdateReturn(storage) {
 export function startAppUpdates({
   version, versionUrl = "/version.json", window, document, fetch,
   onAvailable = () => {}, beforeReload = () => {}, now = Date.now,
-  interval = 60000, idleTime = 5000,
+  interval = 15000, reloadDelay = 3000,
 }) {
   let stopped = false, loading = false, verified = false, timer, request;
-  let available = null, notified = null, attempted = null;
-  let lastInteraction = now(), nextCheck = 0;
+  let available = null, notified = null, attempted = null, forceRequested = false;
+  let detectedAt = 0, nextCheck = 0;
   const visible = () => document.visibilityState !== "hidden" && window.navigator.onLine !== false;
   const notify = (value) => {
     if (value === notified) return;
     notified = value;
     onAvailable(value);
   };
-  const apply = (manual = false) => {
+  const forceReload = () => {
+    if (!forceRequested || !visible() || hasPendingAppWrites()) return false;
+    forceRequested = false;
+    beforeReload();
+    window.location.replace(recoveryUrl(window.location.href, available || version));
+    return true;
+  };
+  const apply = () => {
     if (!available || !verified || !visible() || updateBlocked(document)) return false;
-    if (!manual && (now() - lastInteraction < idleTime ||
-        attempted === available || new URL(window.location.href).searchParams.get("__app_version") === available)) return false;
+    if (now() - detectedAt < reloadDelay ||
+        attempted === available || new URL(window.location.href).searchParams.get("__app_version") === available) return false;
     attempted = available;
     beforeReload();
-    window.location.replace(updateUrl(window.location.href, available));
+    window.location.replace(recoveryUrl(window.location.href, available));
     return true;
   };
   const schedule = () => {
-    if (!stopped) timer = window.setTimeout(check, available && visible() ? 1000 : interval);
+    if (!stopped) timer = window.setTimeout(check, (available || forceRequested) && visible() ? 1000 : interval);
   };
   async function check(force = false) {
     if (stopped || loading) return;
@@ -80,6 +93,7 @@ export function startAppUpdates({
         if (typeof data.version !== "string" || !/^[a-zA-Z0-9._-]{1,100}$/.test(data.version)) throw new Error("Invalid version");
         if (!stopped) {
           verified = true;
+          if (available !== data.version) detectedAt = now();
           available = data.version === version ? null : data.version;
           notify(available);
         }
@@ -90,25 +104,26 @@ export function startAppUpdates({
         nextCheck = now() + interval;
       }
     }
-    if (!stopped) { apply(); schedule(); }
+    if (!stopped) { if (!forceReload()) apply(); schedule(); }
   }
-  const activity = () => { lastInteraction = now(); };
   const resume = () => { check(true); };
   const events = ["pageshow", "focus", "online"];
   events.forEach((event) => window.addEventListener(event, resume));
   document.addEventListener("visibilitychange", resume);
-  const inputs = ["pointerdown", "keydown", "input"];
-  inputs.forEach((event) => document.addEventListener(event, activity, true));
   check();
   return {
-    apply: () => apply(true),
+    force() {
+      forceRequested = true;
+      const applied = forceReload();
+      if (!applied) { window.clearTimeout(timer); schedule(); }
+      return applied;
+    },
     stop() {
       stopped = true;
       window.clearTimeout(timer);
       request?.abort();
       events.forEach((event) => window.removeEventListener(event, resume));
       document.removeEventListener("visibilitychange", resume);
-      inputs.forEach((event) => document.removeEventListener(event, activity, true));
     },
   };
 }

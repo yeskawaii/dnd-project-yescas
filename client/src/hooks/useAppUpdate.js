@@ -15,5 +15,5 @@ export default function useAppUpdate(beforeReload) {
     });
     return () => updater.current?.stop();
   }, []);
-  return { available, apply: () => updater.current?.apply() };
+  return { available, force: () => updater.current?.force() };
 }

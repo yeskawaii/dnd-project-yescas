@@ -3,7 +3,7 @@ import test from "node:test";
 import { appVersion } from "../../build/appVersion.js";
 import {
   clearUpdateReturn, finishAppWrite, hasPendingAppWrites, readUpdateReturn,
-  saveUpdateReturn, startAppUpdates, trackAppWrite, updateBlocked, updateUrl,
+  saveUpdateReturn, startAppUpdates, trackAppWrite, updateBlocked, updateUrl, recoveryUrl,
 } from "./appUpdate.js";
 
 class Target {
@@ -69,10 +69,10 @@ test("each frontend build publishes the same unique version it embeds in the app
   assert.notEqual(first.config().define["import.meta.env.VITE_APP_VERSION"], second.config().define["import.meta.env.VITE_APP_VERSION"]);
 });
 
-test("the current app checks every minute without reloading or showing a notice", async () => {
+test("the current app checks every 15 seconds without reloading or showing a notice", async () => {
   const h = await harness();
   await h.advance(120000);
-  assert.equal(h.requests.length, 3);
+  assert.equal(h.requests.length, 9);
   assert.equal(h.requests[0].options.cache, "no-store");
   assert.equal(h.requests[0].options.credentials, "same-origin");
   assert.notEqual(h.requests[0].url, h.requests[1].url);
@@ -81,19 +81,19 @@ test("the current app checks every minute without reloading or showing a notice"
   h.updater.stop();
 });
 
-test("a restored phone page checks immediately and reloads the new version after idle time", async () => {
+test("a restored phone page checks immediately and loads cache recovery after a fixed countdown", async () => {
   const h = await harness();
   h.state.remote = "release-b";
   h.window.emit("pageshow");
   await flush();
   assert.equal(h.requests.length, 2);
   assert.deepEqual(h.notices, ["release-b"]);
-  await h.advance(4000);
+  await h.advance(2000);
   assert.equal(h.reloads.length, 0);
   await h.advance(1000);
   assert.equal(h.reloads.length, 1);
   assert.equal(h.state.prepared, 1);
-  assert.equal(h.reloads[0], "https://dnd.example/?table=yes&__app_version=release-b#map");
+  assert.equal(h.reloads[0], recoveryUrl("https://dnd.example/?table=yes#map", "release-b"));
   await h.advance(60000);
   assert.equal(h.reloads.length, 1, "A proxy returning stale assets must not cause a reload loop");
   h.updater.stop();
@@ -104,7 +104,6 @@ test("unsaved DM edits, open editors and pending character/map writes defer the 
   h.document.blocked = true;
   await h.advance(10000);
   assert.equal(h.reloads.length, 0);
-  assert.equal(h.updater.apply(), false, "The update button also protects unfinished edits");
   h.document.blocked = false;
   const write = { method: "patch" };
   trackAppWrite(write);
@@ -117,18 +116,20 @@ test("unsaved DM edits, open editors and pending character/map writes defer the 
   } finally { finishAppWrite(write); h.updater.stop(); }
 });
 
-test("typing and focused or changed form fields postpone the reload until work is finished", async () => {
+test("continuous taps and a focused zoom selector no longer postpone updates indefinitely", async () => {
   const h = await harness({ remote: "release-b" });
-  await h.advance(4000);
+  await h.advance(1000);
   h.document.emit("input");
-  await h.advance(4000);
-  assert.equal(h.reloads.length, 0);
   h.document.focused = true;
   await h.advance(2000);
-  assert.equal(h.reloads.length, 0);
-  h.document.focused = false;
+  assert.equal(h.reloads.length, 1);
+  h.updater.stop();
+});
+
+test("unfinished form drafts still defer automatic reloads", async () => {
+  const h = await harness({ remote: "release-b" });
   h.document.inputs = [{ value: "draft", defaultValue: "" }];
-  await h.advance(2000);
+  await h.advance(5000);
   assert.equal(h.reloads.length, 0);
   h.document.inputs = [];
   await h.advance(1000);
@@ -151,6 +152,8 @@ test("offline and hidden apps wait, then check immediately when they return", as
   h.window.emit("online");
   await flush();
   assert.equal(h.requests.length, 2);
+  assert.equal(h.reloads.length, 0);
+  await h.advance(3000);
   assert.equal(h.reloads.length, 1);
   h.updater.stop();
 });
@@ -163,7 +166,7 @@ test("errors, unavailable version files and a deployment gap never trigger a rel
   ]) {
     const h = await harness({ fetcher });
     await h.advance(60000);
-    assert.equal(h.requests.length, 2);
+    assert.equal(h.requests.length, 5);
     assert.deepEqual(h.reloads, []);
     h.updater.stop();
   }
@@ -209,6 +212,26 @@ test("only writes block updates and tracking tolerates duplicate finalization", 
   finishAppWrite(patch);
   assert.equal(hasPendingAppWrites(), false);
   assert.equal(updateBlocked({ querySelector: () => null, querySelectorAll: () => [] }), false);
+});
+
+test("force update repairs even the current version and waits only for an in-flight save", async () => {
+  const h = await harness();
+  h.document.blocked = true;
+  h.document.focused = true;
+  const save = { method: "post" };
+  trackAppWrite(save);
+  try {
+    assert.equal(h.updater.force(), false);
+    await h.advance(1000);
+    assert.equal(h.reloads.length, 0);
+    finishAppWrite(save);
+    await h.advance(1000);
+    assert.equal(h.reloads.length, 1);
+    assert.equal(h.state.prepared, 1);
+    const target = new URL(h.reloads[0]);
+    assert.equal(target.pathname, "/actualizar.html");
+    assert.equal(target.searchParams.get("volver"), updateUrl("https://dnd.example/?table=yes#map", "release-a"));
+  } finally { finishAppWrite(save); h.updater.stop(); }
 });
 
 test("automatic updates restore only this account's selected character and tolerate denied storage", () => {

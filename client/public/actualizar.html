@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#101918" />
+    <title>Actualizar · Bag of Holding</title>
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #101918; color: #edf1e9; }
+      body { min-height: 90dvh; margin: 0; display: grid; place-items: center; padding: 24px; box-sizing: border-box; }
+      main { width: min(100%, 400px); padding: 28px; background: #192523; border: 1px solid #34473e; border-radius: 20px; }
+      h1 { margin: 0 0 16px; font-size: 24px; font-weight: 600; }
+      p { color: #a4b4ab; line-height: 1.6; }
+      button { min-height: 48px; border: 0; border-radius: 12px; padding: 12px 20px; background: #b7ddc4; color: #101918; font: inherit; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Actualizando tu aventura</h1>
+      <p id="status" role="status">Preparando la versión más reciente…</p>
+      <p>Tu sesión y tus personajes se conservan.</p>
+      <button id="retry" hidden>Volver a intentar</button>
+      <noscript>Activa JavaScript para actualizar la aplicación.</noscript>
+    </main>
+    <script>
+      async function updateApplication() {
+        const status = document.getElementById("status");
+        const retry = document.getElementById("retry");
+        retry.hidden = true;
+        status.textContent = "Limpiando archivos anteriores…";
+        try {
+          // Only downloaded caches/worker registrations. Never clear login or
+          // character data in localStorage, sessionStorage or IndexedDB.
+          const cleanup = [];
+          if (navigator.serviceWorker?.getRegistrations) cleanup.push(navigator.serviceWorker.getRegistrations().then((registrations) =>
+            Promise.allSettled(registrations.map((registration) => registration.unregister()))));
+          if (window.caches) cleanup.push(window.caches.keys().then((names) =>
+            Promise.allSettled(names.map((name) => window.caches.delete(name)))));
+          let cleanupTimeout;
+          try {
+            await Promise.race([
+              Promise.allSettled(cleanup),
+              new Promise((resolve) => { cleanupTimeout = setTimeout(resolve, 2000); }),
+            ]);
+          } finally { clearTimeout(cleanupTimeout); }
+          status.textContent = "Descargando la versión actual…";
+          const request = new AbortController();
+          const timeout = setTimeout(() => request.abort(), 15000);
+          let data;
+          try {
+            const response = await fetch("/version.json?t=" + Date.now(), { cache: "no-store", credentials: "same-origin", signal: request.signal });
+            if (!response.ok) throw new Error("Version unavailable");
+            data = await response.json();
+          } finally { clearTimeout(timeout); }
+          if (typeof data.version !== "string" || !/^[a-zA-Z0-9._-]{1,100}$/.test(data.version)) throw new Error("Invalid version");
+          const requested = new URL(location.href).searchParams.get("volver") || "/";
+          let target;
+          try { target = new URL(requested, location.origin); } catch { target = new URL("/", location.origin); }
+          if (target.origin !== location.origin || target.pathname === "/actualizar.html") target = new URL("/", location.origin);
+          target.searchParams.set("__app_version", data.version);
+          target.searchParams.set("__refresh", String(Date.now()));
+          location.replace(target.href);
+        } catch {
+          status.textContent = "No se pudo descargar la actualización. Comprueba tu conexión y vuelve a intentarlo.";
+          retry.hidden = false;
+        }
+      }
+      document.getElementById("retry").addEventListener("click", updateApplication);
+      updateApplication();
+    </script>
+  </body>
+</html>
