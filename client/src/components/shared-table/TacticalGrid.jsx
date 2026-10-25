@@ -1,25 +1,49 @@
-import { useRef, useState } from "react";
-import { cellCenter, cellPolygon, mapBounds } from "../../utils/mapGeometry";
+import { useLayoutEffect, useRef, useState } from "react";
+import { cellCenter, cellPolygon, mapBounds, tokenViewport } from "../../utils/mapGeometry";
+import Icon from "../ui/Icon";
+import { tokenIcon } from "../../../../shared/mapTokens.mjs";
 
 const symbols = { wall: "▧", water: "≈", door: "▥", fog: "?" };
 const terrainNames = { wall: "muro", water: "agua", door: "puerta", fog: "niebla" };
-export default function TacticalGrid({ map, combatants, activeId, selectedId, onCellClick, onPaint, measurement }) {
+function centerToken(container, map, token, zoom, behavior) {
+  if (!container || !token) return;
+  container.scrollTo({
+    ...tokenViewport(map, token, { width: container.clientWidth, height: container.clientHeight }, zoom),
+    behavior,
+  });
+}
+
+export default function TacticalGrid({ map, combatants, activeId, selectedId, onCellClick, onPaint, measurement, autoCenter = false }) {
   const [zoom, setZoom] = useState(1);
   const container = useRef(null);
+  const centeredView = useRef(null);
   const bounds = mapBounds(map);
   const cells = new Map(map.cells.map((cell) => [`${cell.x}:${cell.y}`, cell.terrain]));
   const tokens = new Map(map.tokens.map((token) => [`${token.x}:${token.y}`, token]));
-  const actors = new Map(combatants.map((entry, index) => [entry.id, { ...entry, number: index + 1 }]));
+  const actors = new Map(combatants.map((entry) => [entry.id, entry]));
   const focusId = selectedId || activeId;
-  const placed = map.tokens.some((token) => token.combatantId === focusId);
+  const focusToken = map.tokens.find((token) => token.combatantId === focusId);
+  const focusX = focusToken?.x, focusY = focusToken?.y;
+  const { gridType, width, height } = map;
+  useLayoutEffect(() => {
+    if (!autoCenter || focusX == null || focusY == null) {
+      centeredView.current = null;
+      return;
+    }
+    const view = JSON.stringify([focusId, gridType, width, height, zoom]);
+    // Reveal newly placed/selected tokens and zoom changes, but let players pan
+    // freely while polling delivers new positions for an existing token.
+    if (centeredView.current === view) return;
+    centerToken(container.current, { gridType, width, height }, { x: focusX, y: focusY }, zoom, "instant");
+    centeredView.current = view;
+  }, [autoCenter, focusId, focusX, focusY, gridType, width, height, zoom]);
   const points = measurement?.map((point) => cellCenter(map, point.x, point.y)) || [];
   return <>
     <div className="dm-map-toolbar">
       <label className="form-field">Zoom<select value={zoom} onChange={(event) => setZoom(Number(event.target.value))}>{[0.65, 0.8, 1, 1.25, 1.5].map((value) => <option key={value} value={value}>{Math.round(value * 100)}%</option>)}</select></label>
-      <button className="button secondary compact" disabled={!placed} onClick={() => {
-        const token = [...container.current.querySelectorAll("[data-combatant]")].find((element) => element.dataset.combatant === focusId);
-        token?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-      }}>Centrar {selectedId ? "selección" : "turno"}</button>
+      <button className="button secondary compact" disabled={!focusToken} onClick={() => {
+        centerToken(container.current, map, focusToken, zoom, "smooth");
+      }}>Centrar {autoCenter && selectedId ? "mi ficha" : selectedId ? "selección" : "turno"}</button>
       <span className="helper-text">{map.gridType === "hex" ? "Hexágonos" : "Cuadrícula"} · {map.feetPerCell || 5} ft por celda</span>
     </div>
     <div ref={container} className="dm-map-scroll" tabIndex={0} role="region" aria-label={onCellClick ? "Mapa táctico desplazable" : "Mapa compartido desplazable"}>
@@ -33,7 +57,7 @@ export default function TacticalGrid({ map, combatants, activeId, selectedId, on
           const label = `Columna ${x + 1}, fila ${y + 1}: ${actor ? `${actor.name}, ` : ""}${terrainNames[terrain] || "suelo"}`;
           const marked = measurement?.some((point) => point.x === x && point.y === y);
           return <g key={index} data-combatant={actor?.id} data-x={x} data-y={y}
-            className={`tactical-cell ${terrain || "floor"} ${actor?.id === activeId ? "current-turn" : ""} ${actor?.id === selectedId ? "selected-token" : ""} ${marked ? "measured" : ""}`}
+            className={`tactical-cell ${terrain || "floor"} ${actor && actor.id === activeId ? "current-turn" : ""} ${actor && actor.id === selectedId ? "selected-token" : ""} ${marked ? "measured" : ""}`}
             role={onCellClick ? "button" : undefined} tabIndex={onCellClick ? 0 : undefined} aria-label={onCellClick ? label : undefined} aria-hidden={!onCellClick || undefined}
             onClick={onCellClick ? () => onCellClick(x, y) : undefined}
             onPointerDown={onPaint ? (event) => { if (event.button === 0) onPaint(x, y); } : undefined}
@@ -50,7 +74,9 @@ export default function TacticalGrid({ map, combatants, activeId, selectedId, on
             } : undefined}>
             <title>{label}</title>
             <polygon points={cellPolygon(map, x, y)} />
-            {actor ? <><circle className={`tactical-token ${actor.kind}`} cx={center.x} cy={center.y} r={14} /><text x={center.x} y={center.y} className="tactical-token-number">{actor.number}</text></>
+            {actor ? <><circle className={`tactical-token ${actor.kind}`} cx={center.x} cy={center.y} r={16} />
+              <Icon name={tokenIcon(actor)} x={center.x - 10} y={center.y - 10} size={20}
+                className="tactical-token-icon" data-token-icon={tokenIcon(actor)} /></>
               : <text x={center.x} y={center.y} className="tactical-terrain">{symbols[terrain]}</text>}
           </g>;
         })}

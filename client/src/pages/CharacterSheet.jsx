@@ -237,6 +237,7 @@ export default function CharacterSheet({
                   key={`${campaignId}:${character._id}`}
                   character={character}
                   table={table}
+                  onUpdate={handleUpdateCharacter}
                 />
               )}
               {activeTab === "character" && section === "stats" && (

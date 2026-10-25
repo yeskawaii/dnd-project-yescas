@@ -3382,11 +3382,15 @@ button {
   flex-shrink: 0;
 }
 .dm-map-scroll {
+  min-width: 0;
+  max-width: 100%;
   overflow: auto;
-  max-height: 650px;
+  max-height: min(650px, 60vh);
+  max-height: min(650px, 60svh);
   border: 1px solid #49604d;
   border-radius: 12px;
   background: #101918;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 .dm-map-grid {
   display: grid;
@@ -3582,8 +3586,8 @@ button {
 .tactical-token.player { fill: #4a6d50; }
 .tactical-token.monster { fill: #8a4540; }
 .tactical-token.ally { fill: #4c6088; }
-.tactical-token-number, .tactical-terrain { text-anchor: middle; dominant-baseline: central; pointer-events: none; }
-.tactical-token-number { fill: #fff1d8; font-size: 12px; font-weight: 700; }
+.tactical-terrain { text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.tactical-token-icon { color: #fff1d8; pointer-events: none; }
 .tactical-terrain { fill: #b7c3b9; font-size: 22px; }
 .tactical-measure { pointer-events: none; stroke: #f2ce82; stroke-width: 3; }
 .tactical-measure line { stroke-dasharray: 7 4; }

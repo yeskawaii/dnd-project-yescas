@@ -5,7 +5,7 @@ import CinematicScene from "./CinematicScene";
 import SharedBattleMap from "./SharedBattleMap";
 import { markSecretRead, readSecretIds, secretReadKey } from "../../utils/tablePresentation";
 
-export default function PlayerTable({ character, table }) {
+export default function PlayerTable({ character, table, onUpdate }) {
   const [expanded, setExpanded] = useState(false);
   const [selectedSecret, setSelectedSecret] = useState(null);
   const campaignId = character.campaign?._id || character.campaign;
@@ -51,7 +51,12 @@ export default function PlayerTable({ character, table }) {
           <p className="helper-text">La vida mostrada corresponde al encuentro que dirige el DM.</p>
         </section>
       )}
-      {data?.map && <SharedBattleMap map={data.map} combatants={data.combat.combatants} activeId={data.combat.activeId} onMoveToken={table.moveToken} />}
+      {data?.map && <SharedBattleMap map={data.map} combatants={data.combat?.combatants || []} activeId={data.combat?.activeId} onMoveToken={table.moveToken}
+        character={character} onRefresh={refresh} onChangeIcon={onUpdate ? async (icon) => {
+          const saved = await onUpdate({ "appearance.emblem": icon });
+          if (saved) refresh();
+          return saved;
+        } : undefined} />}
       {data && !data.enabled && !data.scene && (
         <div className="surface table-waiting"><Icon name="scene" size={32} /><h3>El telón está a punto de abrirse</h3>
           <p>Cuando el DM presente una escena o comparta el combate, aparecerá aquí automáticamente.</p></div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Icon from "../ui/Icon";
 import TacticalGrid from "../shared-table/TacticalGrid";
+import TokenBadge from "../shared-table/TokenBadge";
 import { cellDistance } from "../../utils/mapGeometry";
 import { mapRoster, placeMapToken, placePartyOnMap, resizeMap } from "../../utils/dmWorkspace";
 
@@ -19,6 +20,7 @@ export default function BattleMap({
   players = [],
   onRefreshPlayers,
   refreshing,
+  tokenIcons = {},
   activeId,
   onChange,
   onDelete,
@@ -30,6 +32,8 @@ export default function BattleMap({
   const paintMap = useRef(map);
   useEffect(() => { paintMap.current = map; }, [map]);
   const roster = mapRoster(map, combatants, players);
+  const visualRoster = roster.map((entry) => ({ ...entry, icon: tokenIcons[entry.id] ||
+    (entry.kind === "player" ? players.find((player) => player._id === entry.sourceId)?.appearance?.emblem : undefined) }));
   const selectedId = roster.some((entry) => entry.id === selected)
     ? selected
     : roster.find((entry) => entry.kind === "player")?.id || roster[0]?.id || "";
@@ -167,7 +171,7 @@ export default function BattleMap({
               <optgroup key={label} label={label}>
                 {entries.map((entry) => (
                   <option key={entry.id} value={entry.id}>
-                    {roster.indexOf(entry) + 1}. {entry.name} · {map.tokens.some((token) => token.combatantId === entry.id) ? "En el mapa" : "Sin colocar"}
+                    {entry.name} · {map.tokens.some((token) => token.combatantId === entry.id) ? "En el mapa" : "Sin colocar"}
                   </option>
                 ))}
               </optgroup>
@@ -217,11 +221,11 @@ export default function BattleMap({
         <p className="helper-text">Distancia directa sin obstáculos ni terreno difícil.{map.gridType !== "hex" ? " Las diagonales alternan 1 y 2 celdas." : " Cada paso entre hexágonos vecinos cuenta una celda."}</p>
         {measurement.length > 0 && <button className="text-button" onClick={() => setMeasurement([])}>Borrar medición</button>}
       </div>}
-      <TacticalGrid map={map} combatants={roster} activeId={activeId} selectedId={selectedId}
+      <TacticalGrid map={map} combatants={visualRoster} activeId={activeId} selectedId={selectedId}
         onCellClick={click} onPaint={!["token", "measure"].includes(tool) ? click : undefined}
         measurement={tool === "measure" ? measurement.filter((point) => point.x < map.width && point.y < map.height) : []} />
       <div className="dm-token-legend">
-        {roster.map((entry, i) => (
+        {visualRoster.map((entry) => (
           <button
             className={`dm-legend-item ${selectedId === entry.id ? "active" : ""}`}
             aria-pressed={selectedId === entry.id}
@@ -231,7 +235,7 @@ export default function BattleMap({
               setTool("token");
             }}
           >
-            <span className={`dm-token ${entry.kind}`}>{i + 1}</span>
+            <TokenBadge entry={entry} />
             <span>{entry.name}
             {!map.tokens.some((token) => token.combatantId === entry.id)
               ? " · sin colocar"

@@ -84,12 +84,14 @@ test("players get movement controls only for their own placed tokens in either m
     const html = render(SharedBattleMap, { map: sharedMap, combatants: players, onMoveToken: noop });
     assert.ok(html.includes("Mueves a Lyra"));
     assert.ok(html.includes("Tu ficha"));
+    assert.ok(html.includes("Centrar mi ficha"));
     assert.ok(html.includes("flechas y Enter"));
     assert.ok(html.includes('role="button"'));
-    assert.match(html, /<span class="dm-legend-item"><span class="dm-token player">2<\/span>Eldrin<\/span>/);
+    assert.match(html, /<span class="dm-legend-item"><span class="dm-token player"[\s\S]*?<\/span>Eldrin<\/span>/);
     const unplaced = render(SharedBattleMap, { map: { ...sharedMap, tokens: sharedMap.tokens.slice(1) }, combatants: players, onMoveToken: noop });
     assert.ok(!unplaced.includes('role="button"'));
-    assert.ok(unplaced.includes("colocar tu ficha en una zona visible"));
+    assert.ok(unplaced.includes("colocar tu personaje en una zona visible"));
+    assert.ok(!unplaced.includes("selected-token"));
   }
 });
 
@@ -109,4 +111,40 @@ test("shared exploration maps display and move participants outside the encounte
   assert.ok(html.includes("Mueves a Lyra"));
   assert.ok(html.includes("Tu ficha"));
   assert.ok(html.includes('data-combatant="ally1"'));
+});
+
+test("an empty or partial map roster still renders encounter tokens and their legend", () => {
+  const lyra = { id: "lyra", name: "Lyra", kind: "player", icon: "bow" };
+  for (const participants of [[], combatants]) {
+    const html = render(SharedBattleMap, { map: { ...map, participants,
+      tokens: [{ combatantId: "lyra", x: 1, y: 1 }], movableTokenIds: ["lyra"] },
+    combatants: [lyra], onMoveToken: noop });
+    assert.ok(html.includes('data-combatant="lyra"'));
+    assert.ok(html.includes("Lyra · Tu ficha"));
+    assert.ok(html.includes("Mueves a Lyra"));
+    assert.equal([...html.matchAll(/data-token-icon="bow"/g)].length, 2);
+  }
+});
+
+test("DM and player tokens use the same chosen emblem in the grid and legend, without numbers", () => {
+  const lyra = { id: "lyra", sourceId: "p1", name: "Lyra", kind: "player" };
+  const sharedMap = { ...map, participants: [{ ...lyra, icon: "moon" }], movableTokenIds: ["lyra"],
+    tokens: [{ combatantId: "lyra", x: 4, y: 5 }] };
+  for (const html of [
+    render(BattleMap, { map: sharedMap, combatants: [lyra], players: [{ ...player, appearance: { emblem: "moon" } }], onChange: noop, onDelete: noop }),
+    render(SharedBattleMap, { map: sharedMap, combatants: [lyra], character: player, onMoveToken: noop, onChangeIcon: noop }),
+  ]) {
+    assert.equal([...html.matchAll(/data-token-icon="moon"/g)].length, 2);
+    assert.ok(!html.includes("tactical-token-number"));
+  }
+  const html = render(SharedBattleMap, { map: sharedMap, combatants: [], character: player, onChangeIcon: noop });
+  assert.ok(html.includes("Elegir mi icono"));
+  assert.ok(html.includes('aria-expanded="false"'));
+});
+
+test("an empty shared map explains missing visible data and offers a refresh", () => {
+  const html = render(SharedBattleMap, { map: { ...map, participants: [], tokens: [] }, combatants: [], onRefresh: noop });
+  assert.ok(html.includes("No se recibieron fichas visibles"));
+  assert.ok(html.includes("Actualizar fichas"));
+  assert.ok(!html.includes("selected-token"));
 });

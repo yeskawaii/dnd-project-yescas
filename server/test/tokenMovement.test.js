@@ -44,6 +44,7 @@ function campaign() {
   return doc;
 }
 function mockMember(context, doc) {
+  context.mock.method(Character, "find", () => ({ select: async () => [] }));
   context.mock.method(Character, "findOne", (query) => ({ select: async () =>
     query._id === characterId && query.user === user && query.campaign === campaignId ? { _id: characterId } : null }));
   context.mock.method(Campaign, "findById", async () => doc);
@@ -163,6 +164,7 @@ test("concurrent moves from the same revision allow exactly one write", async (c
 });
 
 test("DM synchronization exposes the full workspace only to its DM", async (context) => {
+  context.mock.method(Character, "find", () => ({ select: async () => [] }));
   context.mock.method(Campaign, "findById", async () => campaign());
   const denied = response();
   await readWorkspace(request(), denied);

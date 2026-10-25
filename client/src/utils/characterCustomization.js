@@ -1,3 +1,6 @@
+import { characterIcons } from "../../../shared/mapTokens.mjs";
+export { characterIcons } from "../../../shared/mapTokens.mjs";
+
 export const characterThemes = [
   {
     id: "forest",
@@ -120,34 +123,6 @@ export const characterThemes = [
     line: "#383838",
     muted: "#a6a6a6",
   },
-];
-export const characterIcons = [
-  ["sword", "Espada"],
-  ["bow", "Arco"],
-  ["axe", "Hacha"],
-  ["dagger", "Daga"],
-  ["shield", "Escudo"],
-  ["helmet", "Yelmo"],
-  ["magic", "Magia"],
-  ["flame", "Fuego"],
-  ["snow", "Hielo"],
-  ["bolt", "Rayo"],
-  ["moon", "Luna"],
-  ["sun", "Sol"],
-  ["leaf", "Naturaleza"],
-  ["paw", "Bestia"],
-  ["skull", "Calavera"],
-  ["wing", "Ala"],
-  ["eye", "Ojo"],
-  ["heart", "Corazón"],
-  ["potion", "Poción"],
-  ["gem", "Gema"],
-  ["book", "Libro"],
-  ["scroll", "Pergamino"],
-  ["bag", "Mochila"],
-  ["dice", "Dados"],
-  ["skill", "Habilidad"],
-  ["star", "Estrella"],
 ];
 export const playWidgets = [
   { id: "vitals", name: "Puntos de vida", icon: "heart", required: true },

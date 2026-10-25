@@ -69,6 +69,10 @@ Con la mesa y el mapa compartidos, cada jugador puede mover la ficha de su
 personaje desde **Partida → Mesa compartida**, incluso sin un combate. El DM
 primero debe colocar su ficha fuera de la niebla desde **Mapa**. La ficha propia
 queda seleccionada: basta tocar una casilla libre, o usar flechas y Enter.
+Al abrir el mapa o cuando el DM coloca tu ficha, la vista se centra en ella,
+también en celular. **Centrar mi ficha** permite recuperarla después de explorar
+el escenario. Puedes deslizar el mapa en ambas direcciones; al actualizarse
+las posiciones se conserva el área que estabas mirando.
 El movimiento se guarda al momento; el resto del grupo y el DM reciben las
 posiciones automáticamente cada cuatro segundos.
 
@@ -85,3 +89,19 @@ combinan con sus cambios pendientes sin borrar notas ni otros ajustes. Si el
 DM también mueve esa misma ficha, su cambio pendiente tiene prioridad al
 guardar. Los destinos que coincidan y otros cambios simultáneos de la mesa
 mantienen la protección de conflictos; no se sobrescriben automáticamente.
+
+### Iconos de las fichas
+
+Cada personaje usa su emblema en la ficha del mapa y en la leyenda, en lugar de
+un número. Desde **Mesa → Elegir mi icono** puedes elegir espada, arco, luna,
+magia y los demás emblemas disponibles. Se guarda en el personaje, igual que
+**Personalizar → Tu emblema**, y el grupo y el DM reciben el cambio sin retirar
+ni volver a colocar la ficha. Los acompañantes usan una huella, los monstruos
+una calavera y los NPC un escudo.
+
+La lista pública del mapa se combina con la del encuentro para soportar
+respuestas con participantes del mapa vacíos o parciales. Al volver a la app
+o recuperar el foco se consulta de nuevo la mesa. Si no se reciben fichas
+visibles, el mapa lo indica y ofrece **Actualizar fichas**; el DM debe guardar
+la mesa y comprobar la niebla. El servidor conserva el filtrado de fichas
+ocultas en todos los dispositivos.

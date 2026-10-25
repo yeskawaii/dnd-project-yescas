@@ -4,6 +4,7 @@ import Campaign from "../models/Campaign.js";
 import Character from "../models/Character.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { playerTable } from "../utils/sharedTable.js";
+import { campaignTokenIcons } from "../utils/tokenIcons.js";
 
 const router = express.Router();
 
@@ -116,7 +117,7 @@ router.get("/:id/dashboard", protect, async (req, res) => {
     }
 
     const players = await Character.find({ campaign: campaign._id }).select(
-      "name class race size level hp armorClass initiativeMisc baseAttack saves stats speed attacks spells feats skills traits inventory effects companions",
+      "name class race size level hp armorClass initiativeMisc baseAttack saves stats speed attacks spells feats skills traits inventory effects companions appearance.emblem",
     );
 
     res.json({ campaign, players });
@@ -141,7 +142,9 @@ router.get("/:id/table", protect, async (req, res) => {
     if (!member) return res.status(403).json({ message: "Este personaje no tiene acceso a la contienda." });
     const campaign = await Campaign.findById(req.params.id);
     if (!campaign) return res.status(404).json({ message: "Contienda no encontrada" });
-    res.json(playerTable(campaign, characterId));
+    const icons = campaign.dmWorkspace?.presentation?.enabled && campaign.dmWorkspace?.presentation?.shareMap
+      ? await campaignTokenIcons(campaign) : {};
+    res.json(playerTable(campaign, characterId, icons));
   } catch {
     res.status(500).json({ message: "No se pudo actualizar la mesa compartida." });
   }
@@ -187,7 +190,7 @@ router.patch("/:id/table/token", protect, async (req, res) => {
       $inc: { workspaceRevision: 1 },
     }, { new: true, arrayFilters: [{ "token.combatantId": combatantId }] });
     if (!saved) return res.status(409).json({ message: "El mapa cambió. Actualiza la mesa y vuelve a elegir el destino." });
-    res.json(playerTable(saved, characterId));
+    res.json(playerTable(saved, characterId, await campaignTokenIcons(saved)));
   } catch {
     res.status(500).json({ message: "No se pudo mover la ficha. Inténtalo de nuevo." });
   }
@@ -203,7 +206,8 @@ router.get("/:id/workspace", protect, async (req, res) => {
     if (!campaign) return res.status(404).json({ message: "Contienda no encontrada" });
     if (String(campaign.dm) !== String(req.user._id || req.user))
       return res.status(403).json({ message: "Solo el DM puede leer esta mesa" });
-    res.json({ workspace: campaign.dmWorkspace, revision: campaign.workspaceRevision || 0 });
+    res.json({ workspace: campaign.dmWorkspace, revision: campaign.workspaceRevision || 0,
+      tokenIcons: await campaignTokenIcons(campaign) });
   } catch {
     res.status(500).json({ message: "No se pudo actualizar la mesa." });
   }

@@ -11,6 +11,15 @@ export function mapBounds(map) {
     ? { width: 12 + hexWidth * (map.width + (map.height > 1 ? 0.5 : 0)), height: 12 + radius * 2 + (map.height - 1) * radius * 1.5 }
     : { width: 12 + map.width * 42, height: 12 + map.height * 42 };
 }
+// Scroll the board itself rather than relying on SVG scrollIntoView support.
+export function tokenViewport(map, token, viewport, zoom = 1) {
+  const center = cellCenter(map, token.x, token.y);
+  const bounds = mapBounds(map);
+  return {
+    left: Math.max(0, Math.min(center.x * zoom - viewport.width / 2, bounds.width * zoom - viewport.width)),
+    top: Math.max(0, Math.min(center.y * zoom - viewport.height / 2, bounds.height * zoom - viewport.height)),
+  };
+}
 export function cellPolygon(map, x, y) {
   const center = cellCenter(map, x, y);
   const offsets = map.gridType === "hex"

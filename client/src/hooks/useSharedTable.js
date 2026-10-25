@@ -46,12 +46,16 @@ export default function useSharedTable(campaignId, characterId) {
     update();
     document.addEventListener("visibilitychange", resume);
     window.addEventListener("online", resume);
+    window.addEventListener("pageshow", resume);
+    window.addEventListener("focus", resume);
     return () => {
       stopped = true;
       window.clearTimeout(timer);
       request?.abort();
       document.removeEventListener("visibilitychange", resume);
       window.removeEventListener("online", resume);
+      window.removeEventListener("pageshow", resume);
+      window.removeEventListener("focus", resume);
     };
   }, [campaignId, characterId, scope, retry]);
 

@@ -109,6 +109,12 @@
 .shared-turn-list small { color: var(--muted); white-space: nowrap; }
 .shared-initiative { min-width: 28px; color: var(--gold); text-align: right; }
 .shared-map .dm-map-scroll { margin-top: 15px; }
+.shared-map { min-width: 0; }
+.shared-map .section-heading { flex-wrap: wrap; }
+.shared-map h2, .shared-map .dm-legend-item { overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+.shared-map .dm-legend-item { min-height: 44px; font-size: 13px; }
+.map-icon-choice { margin-top: 14px; }
+.map-icon-choice .icon-picker { margin-top: 16px; }
 .shared-map .dm-map-cell:hover { outline: none; }
 .table-waiting { padding: 45px 24px; text-align: center; color: var(--gold); }
 .table-waiting h3 {

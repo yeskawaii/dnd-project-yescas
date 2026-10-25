@@ -37,6 +37,7 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack, onCustom
   );
   const [revision, setRevision] = useState(campaign.workspaceRevision || 0);
   const [players, setPlayers] = useState(initialPlayers);
+  const [tokenIcons, setTokenIcons] = useState({});
   const [tab, setTab] = useState("combat");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -115,6 +116,7 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack, onCustom
     }
   };
   const receiveRemote = useEffectEvent((data) => {
+    if (data.tokenIcons) setTokenIcons(data.tokenIcons);
     if (saveLock.current || data.revision <= revision) return;
     const next = dirty ? mergeTokenUpdates(syncedWorkspace.current, workspace, data.workspace) : data.workspace;
     if (!next) {
@@ -595,6 +597,7 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack, onCustom
             onRefreshPlayers={refreshPlayers}
             refreshing={refreshing}
             combatants={workspace.combat.combatants}
+            tokenIcons={tokenIcons}
             activeId={workspace.combat.activeId}
             onChange={(map) => change({ ...workspace, map })}
             onDelete={ask}

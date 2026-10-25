@@ -116,6 +116,7 @@ test("messages and presented scenes remain available when tactical sharing is di
 });
 
 test("every public read checks character ownership and current membership before loading the campaign", async (context) => {
+  context.mock.method(Character, "find", () => ({ select: async () => [] }));
   context.mock.method(Character, "findOne", (query) => {
     assert.deepEqual(query, { _id: characterId, user, campaign: campaignId });
     return { select: async (fields) => { assert.equal(fields, "_id"); return { _id: characterId }; } };

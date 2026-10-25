@@ -18,13 +18,13 @@ const secondCharacter = "507f1f77bcf86cd799439044";
 const signingKey = "isolated-test-key-for-in-memory-requests";
 
 // Full Express dispatch and JWT middleware, without binding a TCP port or using MongoDB.
-function request(app, method, url, user, body = {}) {
+function request(app, method, url, user, body = {}, headers = {}) {
   return new Promise((resolve, reject) => {
     const socket = new Duplex({ read() {}, write(chunk, encoding, done) { done(); } });
     const req = new IncomingMessage(socket);
     req.method = method;
     req.url = url;
-    req.headers = user ? { authorization: `Bearer ${jwt.sign({ id: user }, signingKey)}` } : {};
+    req.headers = { ...headers, ...(user ? { authorization: `Bearer ${jwt.sign({ id: user }, signingKey)}` } : {}) };
     req.body = body;
     const res = new ServerResponse(req);
     res.end = (data) => {
@@ -114,6 +114,7 @@ for (const exploration of [false, true]) test(`authenticated players move their 
   const members = new Map([[firstCharacter, firstUser], [secondCharacter, secondUser]]);
   context.mock.method(Character, "findOne", (query) => ({ select: async () =>
     members.get(String(query._id)) === query.user && query.campaign === campaignId ? { _id: query._id } : null }));
+  context.mock.method(Character, "find", () => ({ select: async () => [] }));
   context.mock.method(Campaign, "findById", async () => stored);
   context.mock.method(Campaign, "findOneAndUpdate", async (filter, update, options) => {
     if ((filter.workspaceRevision ?? 0) !== stored.workspaceRevision) return null;
@@ -159,4 +160,76 @@ for (const exploration of [false, true]) test(`authenticated players move their 
   assert.deepEqual(stored.dmWorkspace.map.tokens.map((token) => token.x), [6, 7]);
   members.delete(firstCharacter);
   assert.equal((await request(app, "PATCH", `${url}/table/token`, firstUser, { ...move, revision: 3 })).status, 403);
+});
+
+test("a player's saved icon reaches phone, desktop, other players and the DM without replacing any token", async (context) => {
+  const oldKey = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = signingKey;
+  context.after(() => { if (oldKey === undefined) delete process.env.JWT_SECRET; else process.env.JWT_SECRET = oldKey; });
+  const app = express();
+  app.use("/api/campaign", campaignRoutes);
+  app.use("/api/character", characterRoutes);
+  const stored = new Campaign({ _id: campaignId, dm, name: "El bosque", inviteCode: "FOREST", workspaceRevision: 3 });
+  const workspace = stored.dmWorkspace;
+  workspace.presentation.enabled = workspace.presentation.shareMap = true;
+  workspace.map.participants.push(
+    { id: "lyra", sourceId: firstCharacter, name: "Lyra", kind: "player" },
+    { id: "eldrin", sourceId: secondCharacter, name: "Eldrin", kind: "player" },
+    { id: "hidden", name: "SECRET_ENEMY", kind: "monster" },
+  );
+  workspace.map.tokens.push({ combatantId: "lyra", x: 1, y: 1 }, { combatantId: "eldrin", x: 2, y: 2 },
+    { combatantId: "hidden", x: 3, y: 3 });
+  const characters = new Map([
+    [firstCharacter, new Character({ _id: firstCharacter, user: firstUser, campaign: campaignId, name: "Lyra", appearance: { emblem: "bow" } })],
+    [secondCharacter, new Character({ _id: secondCharacter, user: secondUser, campaign: campaignId, name: "Eldrin", appearance: { emblem: "magic" } })],
+  ]);
+  context.mock.method(Campaign, "findById", async () => stored);
+  context.mock.method(Character, "findOne", (query) => ({ select: async () => {
+    const character = characters.get(String(query._id));
+    return character && String(character.user) === query.user && String(character.campaign) === query.campaign ? { _id: character._id } : null;
+  } }));
+  context.mock.method(Character, "find", (query) => ({ select: async (fields) => {
+    assert.equal(String(query.campaign), campaignId);
+    assert.equal(fields, "_id appearance.emblem");
+    return query._id.$in.map((id) => characters.get(String(id))).filter(Boolean);
+  } }));
+  context.mock.method(Character, "findOneAndUpdate", (query, update) => ({ populate: async () => {
+    const character = characters.get(String(query._id));
+    if (!character || String(character.user) !== query.user) return null;
+    character.set(update.$set);
+    await character.validate();
+    return character;
+  } }));
+  const url = `/api/campaign/${campaignId}`;
+  const read = (user, id, agent) => request(app, "GET", `${url}/table?characterId=${id}`, user, {}, { "user-agent": agent });
+  const desktop = await read(firstUser, firstCharacter, "Mozilla/5.0 (Macintosh) Chrome/130");
+  const iphone = await read(firstUser, firstCharacter, "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile Safari");
+  const android = await read(firstUser, firstCharacter, "Mozilla/5.0 (Linux; Android 15) Chrome/130 Mobile");
+  for (const response of [desktop, iphone, android]) {
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body.map.participants.map(({ name, icon }) => ({ name, icon })), [
+      { name: "Lyra", icon: "bow" }, { name: "Eldrin", icon: "magic" },
+    ]);
+    assert.deepEqual(response.body.map.movableTokenIds, ["lyra"]);
+    assert.ok(!JSON.stringify(response.body).includes("SECRET_ENEMY"));
+    assert.ok(!JSON.stringify(response.body).includes('"sourceId"'));
+  }
+  assert.deepEqual(iphone.body, desktop.body);
+  assert.deepEqual(android.body, desktop.body);
+  const foreign = await request(app, "PATCH", `/api/character/${firstCharacter}/update`, secondUser, { "appearance.emblem": "skull" });
+  assert.equal(foreign.status, 404);
+  const saved = await request(app, "PATCH", `/api/character/${firstCharacter}/update`, firstUser, { "appearance.emblem": "moon" });
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.appearance.emblem, "moon");
+  for (const [user, id] of [[firstUser, firstCharacter], [secondUser, secondCharacter]]) {
+    const updated = await read(user, id, "Mobile Safari");
+    assert.equal(updated.body.map.participants.find((entry) => entry.id === "lyra").icon, "moon");
+    assert.deepEqual(updated.body.map.tokens, desktop.body.map.tokens);
+    assert.equal(updated.body.revision, 3);
+  }
+  const dmView = await request(app, "GET", `${url}/workspace`, dm);
+  assert.equal(dmView.status, 200);
+  assert.equal(dmView.body.tokenIcons.lyra, "moon");
+  assert.equal(dmView.body.tokenIcons.eldrin, "magic");
+  assert.equal(dmView.body.revision, 3);
 });

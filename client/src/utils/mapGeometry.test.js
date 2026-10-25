@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cellCenter, cellDistance, cellPolygon, mapBounds } from "./mapGeometry.js";
+import { cellCenter, cellDistance, cellPolygon, mapBounds, tokenViewport } from "./mapGeometry.js";
 
 test("all six neighbors are one hex away on both even and odd rows", () => {
   const map = { gridType: "hex" };
@@ -39,4 +39,34 @@ test("every hex and square vertex fits inside the board, including shifted bound
       }
     }
   }
+});
+
+test("centering reveals the full player token on phone, tablet and desktop at every zoom", () => {
+  for (const gridType of ["square", "hex"]) {
+    const map = { gridType, width: 30, height: 30 };
+    for (const width of [244, 299, 692, 1004]) {
+      const viewport = { width, height: 360 };
+      for (const zoom of [0.65, 0.8, 1, 1.25, 1.5]) {
+        for (const token of [{ x: 0, y: 0 }, { x: 29, y: 29 }, { x: 12, y: 10 }, { x: 12, y: 11 }]) {
+          const scroll = tokenViewport(map, token, viewport, zoom);
+          const center = cellCenter(map, token.x, token.y);
+          const left = center.x * zoom - scroll.left;
+          const top = center.y * zoom - scroll.top;
+          const radius = 16 * zoom;
+          assert.ok(left - radius >= 0 && left + radius <= viewport.width);
+          assert.ok(top - radius >= 0 && top + radius <= viewport.height);
+          assert.ok(scroll.left >= 0 && scroll.top >= 0);
+        }
+      }
+    }
+  }
+});
+
+test("centering clamps at the board edges and leaves small boards at the origin", () => {
+  assert.deepEqual(tokenViewport({ width: 16, height: 14 }, { x: 12, y: 10 }, { width: 300, height: 360 }), {
+    left: 381, top: 240,
+  });
+  assert.deepEqual(tokenViewport({ width: 2, height: 2 }, { x: 1, y: 1 }, { width: 300, height: 360 }), {
+    left: 0, top: 0,
+  });
 });
