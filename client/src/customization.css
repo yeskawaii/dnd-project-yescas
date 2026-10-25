@@ -19,6 +19,38 @@
     ),
     var(--bg);
 }
+.dm-personalized .entry-topbar {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.dm-personalized .dm-savebar {
+  background: var(--panel);
+}
+.dm-personalized .dm-savebar:not(.unsaved) {
+  border-color: var(--line);
+}
+.dm-personalized .dm-roster-row > input,
+.dm-personalized .dm-hp-panel,
+.dm-personalized .dm-attributes > div,
+.dm-personalized .dm-detail-item,
+.dm-personalized .dm-map-scroll {
+  background: var(--bg);
+}
+.dm-personalized .dm-turn-banner,
+.dm-personalized .dm-roster-row.selected,
+.dm-personalized .dm-tabs > button.active {
+  background: color-mix(in srgb, var(--mint) 6%, transparent);
+}
+.dm-personalized .dm-turn-banner,
+.dm-personalized .dm-roster-row.selected,
+.dm-personalized .dm-party-card.selected {
+  border-color: color-mix(in srgb, var(--mint) 45%, var(--line));
+}
+.dm-style-preview {
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--bg);
+}
 .personalized-sheet .character-header,
 .personalized-sheet .main-nav {
   background: color-mix(in srgb, var(--bg) 94%, transparent);

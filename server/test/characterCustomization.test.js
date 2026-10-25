@@ -23,6 +23,16 @@ test("legacy sheets receive independent appearance and play layout defaults", as
   assert.deepEqual(second.playLayout.order.toObject(), defaultOrder);
 });
 
+test("pink, three gray tones, white and black survive validation and reload", async () => {
+  for (const theme of ["pink", "gray-light", "gray", "gray-dark", "white", "black"]) {
+    const original = character({ appearance: { theme } });
+    await original.validate();
+    const reloaded = new Character(JSON.parse(JSON.stringify(original)));
+    await reloaded.validate();
+    assert.equal(reloaded.appearance.theme, theme);
+  }
+});
+
 test("portraits, layout and resource icons survive serialization without changing resource identities", async () => {
   const original = character({
     appearance: {

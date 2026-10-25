@@ -30,7 +30,7 @@ const tabs = [
   ["notes", "note", "Diario"],
   ["map", "map", "Mapa"],
 ];
-export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
+export default function DMWorkspace({ campaign, initialPlayers, onBack, onCustomize }) {
   const [workspace, setWorkspace] = useState(
     () => campaign.dmWorkspace || emptyWorkspace(),
   );
@@ -246,6 +246,10 @@ export default function DMWorkspace({ campaign, initialPlayers, onBack }) {
           <Icon name="book" size={20} />
           Dungeon Master
         </div>
+        <button className="text-button" onClick={onCustomize}>
+          <Icon name="palette" size={18} />
+          Mi estilo
+        </button>
       </header>
       <div className="dm-workspace-heading">
         <div>

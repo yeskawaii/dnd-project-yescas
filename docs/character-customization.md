@@ -2,11 +2,13 @@
 
 En **Partida → Mi estilo y mi partida**, o tocando el retrato de la cabecera, puedes personalizar cada personaje. Los cambios se guardan al pulsar **Guardar mi estilo** y se conservan en otros dispositivos.
 
-- **Mi personaje:** cinco paletas (Bosque, Arcano, Ascua, Marea y Luna), cuatro ambientes, tres marcos y 26 emblemas. Puedes elegir una imagen JPG, PNG o WebP de tu galería, ajustar el acercamiento y el encuadre, y confirmar con **Usar recorte**. Quitar la foto recupera el emblema.
+- **Mi personaje:** once paletas (Bosque, Arcano, Ascua, Marea, Luna, Rosa, Gris claro, Gris medio, Gris oscuro, Blanco y Negro), cuatro ambientes, tres marcos y 26 emblemas. Las paletas mantienen fondos oscuros y acentos legibles: Blanco usa acentos blancos y Negro un fondo negro con acentos claros. Puedes elegir una imagen JPG, PNG o WebP de tu galería, ajustar el acercamiento y el encuadre, y confirmar con **Usar recorte**. Quitar la foto recupera el emblema.
 - **Mi partida:** ordena cuatro tarjetas con las flechas, oculta defensa o accesos y elige tamaño cómodo o compacto. Puntos de vida y acciones rápidas siempre permanecen disponibles.
 - **Iconos de recursos:** abre un favorito en Partida y despliega **Icono de este recurso**; el símbolo elegido se guarda inmediatamente. También puedes elegirlo al crear o editar un recurso. La opción **Auto** recupera su símbolo por defecto. Para editar una habilidad existente, toca su bono en la tabla de habilidades. Los iconos personalizados aparecen también en los favoritos.
 
 La vista previa no guarda cambios. Cerrar el panel los descarta. **Restablecer estilo y tarjetas** prepara los valores originales; todavía debes guardar para aplicarlos. Si falla el guardado, el panel mantiene los cambios para volver a intentarlo.
+
+El **Dungeon Master** dispone de las mismas once paletas desde **Mi estilo**, tanto en Mis contiendas como dentro de una mesa. La selección se aplica también a sus paneles y se guarda por cuenta en este navegador, de forma independiente de los personajes y de los datos compartidos de la campaña. Cerrar sin guardar descarta la vista previa.
 
 ## Datos
 

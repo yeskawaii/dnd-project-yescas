@@ -12,7 +12,10 @@ export const appearanceSchema = new mongoose.Schema(
   {
     theme: {
       type: String,
-      enum: ["forest", "arcane", "ember", "ocean", "moon"],
+      enum: [
+        "forest", "arcane", "ember", "ocean", "moon",
+        "pink", "gray-light", "gray", "gray-dark", "white", "black",
+      ],
       default: "forest",
       required: true,
     },

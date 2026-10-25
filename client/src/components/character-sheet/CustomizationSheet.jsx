@@ -3,9 +3,9 @@ import BottomSheet from "../ui/BottomSheet";
 import CharacterAvatar from "../ui/CharacterAvatar";
 import Icon from "../ui/Icon";
 import IconPicker from "../ui/IconPicker";
+import ThemePicker from "../ui/ThemePicker";
 import {
   appearanceStyle,
-  characterThemes,
   defaultAppearance,
   getAppearance,
   getPlayLayout,
@@ -251,27 +251,11 @@ export default function CustomizationSheet({ character, onUpdate, onClose }) {
               </section>
               <section className="customization-section">
                 <h3>Tu paleta</h3>
-                <div className="theme-grid">
-                  {characterThemes.map((theme) => (
-                    <button
-                      type="button"
-                      key={theme.id}
-                      style={appearanceStyle({ theme: theme.id })}
-                      className={`theme-option ${appearance.theme === theme.id ? "selected" : ""}`}
-                      aria-pressed={appearance.theme === theme.id}
-                      onClick={() => update("theme", theme.id)}
-                    >
-                      <span className="theme-swatch">
-                        <Icon name={appearance.emblem} size={22} />
-                      </span>
-                      <strong>{theme.name}</strong>
-                      <small>{theme.hint}</small>
-                      {appearance.theme === theme.id && (
-                        <Icon name="check" size={15} />
-                      )}
-                    </button>
-                  ))}
-                </div>
+                <ThemePicker
+                  value={appearance.theme}
+                  emblem={appearance.emblem}
+                  onChange={(value) => update("theme", value)}
+                />
               </section>
               <section className="customization-section">
                 <h3>Ambiente y marco</h3>
