@@ -15,7 +15,16 @@ const secondUser = "507f1f77bcf86cd799439013";
 const campaignId = "507f1f77bcf86cd799439022";
 const firstCharacter = "507f1f77bcf86cd799439033";
 const secondCharacter = "507f1f77bcf86cd799439044";
+const extraCharacter = "507f1f77bcf86cd799439055";
 const signingKey = "isolated-test-key-for-in-memory-requests";
+
+function mockMembers(context, members) {
+  context.mock.method(Character, "find", (query) => ({ select: async () => {
+    assert.equal(String(query.campaign), campaignId);
+    return [...members].filter(([id, owner]) => query.user ? owner === query.user : query._id.$in.includes(id))
+      .map(([_id]) => ({ _id }));
+  } }));
+}
 
 // Full Express dispatch and JWT middleware, without binding a TCP port or using MongoDB.
 function request(app, method, url, user, body = {}, headers = {}) {
@@ -46,11 +55,7 @@ test("authenticated DM publishes, players receive individual views, and revocati
   let stored = new Campaign({ _id: campaignId, dm, name: "El bosque", inviteCode: "FOREST" });
   const members = new Map([[firstCharacter, firstUser], [secondCharacter, secondUser]]);
   context.mock.method(Campaign, "findById", async () => stored);
-  context.mock.method(Character, "findOne", (query) => ({
-    select: async () => members.get(String(query._id)) === query.user && query.campaign === campaignId ? { _id: query._id } : null,
-  }));
-  context.mock.method(Character, "find", (query) => ({ select: async () =>
-    query._id.$in.filter((id) => members.has(id)).map((_id) => ({ _id })) }));
+  mockMembers(context, members);
   context.mock.method(Campaign, "findOneAndUpdate", async (filter, update) => {
     const expectedRevision = filter.workspaceRevision ?? 0;
     if (filter.dm !== dm || expectedRevision !== stored.workspaceRevision) return null;
@@ -96,7 +101,7 @@ test("authenticated DM publishes, players receive individual views, and revocati
   assert.equal((await request(app, "GET", `${baseUrl}/table?characterId=${firstCharacter}`, firstUser)).status, 403);
 });
 
-for (const exploration of [false, true]) test(`authenticated players move their own tokens ${exploration ? "without a combat" : "in combat"}, everyone sees the result, and the DM retains control`, async (context) => {
+for (const exploration of [false, true]) test(`one open character controls all the account's campaign tokens ${exploration ? "without a combat" : "in combat"}, everyone sees the result, and the DM retains control`, async (context) => {
   const oldKey = process.env.JWT_SECRET;
   process.env.JWT_SECRET = signingKey;
   context.after(() => { if (oldKey === undefined) delete process.env.JWT_SECRET; else process.env.JWT_SECRET = oldKey; });
@@ -109,12 +114,12 @@ for (const exploration of [false, true]) test(`authenticated players move their 
   participants.push(
     { id: "lyra", sourceId: firstCharacter, name: "Lyra", kind: "player" },
     { id: "eldrin", sourceId: secondCharacter, name: "Eldrin", kind: "player" },
+    { id: "runa", sourceId: extraCharacter, name: "Runa", kind: "player" },
   );
-  stored.dmWorkspace.map.tokens.push({ combatantId: "lyra", x: 1, y: 1 }, { combatantId: "eldrin", x: 2, y: 2 });
-  const members = new Map([[firstCharacter, firstUser], [secondCharacter, secondUser]]);
-  context.mock.method(Character, "findOne", (query) => ({ select: async () =>
-    members.get(String(query._id)) === query.user && query.campaign === campaignId ? { _id: query._id } : null }));
-  context.mock.method(Character, "find", () => ({ select: async () => [] }));
+  stored.dmWorkspace.map.tokens.push({ combatantId: "lyra", x: 1, y: 1 }, { combatantId: "eldrin", x: 2, y: 2 },
+    { combatantId: "runa", x: 8, y: 8 });
+  const members = new Map([[firstCharacter, firstUser], [secondCharacter, secondUser], [extraCharacter, firstUser]]);
+  mockMembers(context, members);
   context.mock.method(Campaign, "findById", async () => stored);
   context.mock.method(Campaign, "findOneAndUpdate", async (filter, update, options) => {
     if ((filter.workspaceRevision ?? 0) !== stored.workspaceRevision) return null;
@@ -135,20 +140,31 @@ for (const exploration of [false, true]) test(`authenticated players move their 
   const url = `/api/campaign/${campaignId}`;
   const move = { characterId: firstCharacter, combatantId: "lyra", x: 4, y: 4, revision: 1 };
   const staleDMWorkspace = stored.dmWorkspace.toObject();
+  const initial = await request(app, "GET", `${url}/table?characterId=${firstCharacter}`, firstUser);
+  assert.equal(initial.status, 200);
+  assert.deepEqual(initial.body.map.movableTokenIds, ["lyra", "runa"]);
   assert.equal((await request(app, "PATCH", `${url}/table/token`, null, move)).status, 401);
   assert.equal((await request(app, "PATCH", `${url}/table/token`, secondUser, move)).status, 403);
   assert.equal((await request(app, "PATCH", `${url}/table/token`, firstUser, { ...move, combatantId: "eldrin" })).status, 403);
   const moved = await request(app, "PATCH", `${url}/table/token`, firstUser, move);
   assert.equal(moved.status, 200);
   assert.equal(moved.body.revision, 2);
+  assert.deepEqual(moved.body.map.movableTokenIds, ["lyra", "runa"]);
   if (exploration) {
     assert.equal(moved.body.combat.combatants.length, 0);
-    assert.deepEqual(moved.body.map.participants.map((entry) => entry.name), ["Lyra", "Eldrin"]);
+    assert.deepEqual(moved.body.map.participants.map((entry) => entry.name), ["Lyra", "Eldrin", "Runa"]);
     assert.equal(moved.body.combat.activeId, "");
   }
+  const extraMove = { ...move, combatantId: "runa", x: 5, y: 4, revision: 2 };
+  const movedExtra = await request(app, "PATCH", `${url}/table/token`, firstUser, extraMove);
+  assert.equal(movedExtra.status, 200);
+  assert.equal(movedExtra.body.revision, 3);
+  assert.deepEqual(movedExtra.body.map.movableTokenIds, ["lyra", "runa"]);
+  assert.deepEqual(movedExtra.body.map.tokens.find((token) => token.combatantId === "runa"), { combatantId: "runa", x: 5, y: 4 });
   const otherView = await request(app, "GET", `${url}/table?characterId=${secondCharacter}`, secondUser);
   assert.deepEqual(otherView.body.map.tokens.find((token) => token.combatantId === "lyra"), { combatantId: "lyra", x: 4, y: 4 });
   assert.deepEqual(otherView.body.map.movableTokenIds, ["eldrin"]);
+  assert.deepEqual(otherView.body.map.tokens.find((token) => token.combatantId === "runa"), { combatantId: "runa", x: 5, y: 4 });
   assert.equal((await request(app, "GET", `${url}/workspace`, firstUser)).status, 403);
   assert.equal((await request(app, "PUT", `${url}/workspace`, dm, { workspace: staleDMWorkspace, revision: 1 })).status, 409);
   const latest = await request(app, "GET", `${url}/workspace`, dm);
@@ -157,7 +173,15 @@ for (const exploration of [false, true]) test(`authenticated players move their 
   workspace.map.tokens.find((token) => token.combatantId === "lyra").x = 6;
   workspace.map.tokens.find((token) => token.combatantId === "eldrin").x = 7;
   assert.equal((await request(app, "PUT", `${url}/workspace`, dm, { workspace, revision: latest.body.revision })).status, 200);
-  assert.deepEqual(stored.dmWorkspace.map.tokens.map((token) => token.x), [6, 7]);
+  assert.deepEqual(stored.dmWorkspace.map.tokens.map((token) => token.x), [6, 7, 5]);
+  // A stale placed token grants no control after its owner or membership changes.
+  for (const revoke of [() => members.set(extraCharacter, secondUser), () => members.delete(extraCharacter)]) {
+    revoke();
+    const refreshed = await request(app, "GET", `${url}/table?characterId=${firstCharacter}`, firstUser);
+    assert.deepEqual(refreshed.body.map.movableTokenIds, ["lyra"]);
+    assert.equal((await request(app, "PATCH", `${url}/table/token`, firstUser, { ...extraMove, revision: 4 })).status, 403);
+    assert.equal(stored.workspaceRevision, 4);
+  }
   members.delete(firstCharacter);
   assert.equal((await request(app, "PATCH", `${url}/table/token`, firstUser, { ...move, revision: 3 })).status, 403);
 });
@@ -184,12 +208,12 @@ test("a player's saved icon reaches phone, desktop, other players and the DM wit
     [secondCharacter, new Character({ _id: secondCharacter, user: secondUser, campaign: campaignId, name: "Eldrin", appearance: { emblem: "magic" } })],
   ]);
   context.mock.method(Campaign, "findById", async () => stored);
-  context.mock.method(Character, "findOne", (query) => ({ select: async () => {
-    const character = characters.get(String(query._id));
-    return character && String(character.user) === query.user && String(character.campaign) === query.campaign ? { _id: character._id } : null;
-  } }));
   context.mock.method(Character, "find", (query) => ({ select: async (fields) => {
     assert.equal(String(query.campaign), campaignId);
+    if (query.user) {
+      assert.equal(fields, "_id");
+      return [...characters.values()].filter((entry) => String(entry.user) === query.user && String(entry.campaign) === query.campaign);
+    }
     assert.equal(fields, "_id appearance.emblem");
     return query._id.$in.map((id) => characters.get(String(id))).filter(Boolean);
   } }));

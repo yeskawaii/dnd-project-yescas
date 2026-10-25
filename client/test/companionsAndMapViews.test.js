@@ -113,6 +113,24 @@ test("shared exploration maps display and move participants outside the encounte
   assert.ok(html.includes('data-combatant="ally1"'));
 });
 
+test("multiple owned characters have a movement selector and selectable legends in both map geometries", () => {
+  const participants = [
+    { id: "lyra", name: "Lyra", kind: "player" },
+    { id: "runa", name: "Runa", kind: "player" },
+    { id: "eldrin", name: "Eldrin", kind: "player" },
+  ];
+  for (const gridType of ["hex", "square"]) {
+    const html = render(SharedBattleMap, { map: { ...map, gridType, participants,
+      movableTokenIds: ["lyra", "runa"], tokens: participants.map((entry, i) => ({ combatantId: entry.id, x: i, y: 1 })),
+    }, combatants: [], onMoveToken: noop });
+    assert.match(html, /<label[^>]*>Ficha que quieres mover<select[^>]*><option value="lyra" selected="">Lyra<\/option><option value="runa">Runa<\/option><\/select>/);
+    assert.ok(html.includes("todos tus personajes de esta campaña desde aquí"));
+    assert.match(html, /<button class="dm-legend-item active"[^>]*aria-pressed="true"[^>]*>[\s\S]*?Lyra · Tu ficha<\/button>/);
+    assert.match(html, /<button class="dm-legend-item "[^>]*aria-pressed="false"[^>]*>[\s\S]*?Runa · Tu ficha<\/button>/);
+    assert.match(html, /<span class="dm-legend-item">[\s\S]*?Eldrin<\/span>/);
+  }
+});
+
 test("an empty or partial map roster still renders encounter tokens and their legend", () => {
   const lyra = { id: "lyra", name: "Lyra", kind: "player", icon: "bow" };
   for (const participants of [[], combatants]) {

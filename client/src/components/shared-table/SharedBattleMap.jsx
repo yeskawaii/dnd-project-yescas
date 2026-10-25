@@ -64,6 +64,13 @@ export default function SharedBattleMap({ map, combatants: encounterCombatants, 
     <section className="surface shared-map" aria-busy={moving}>
       <div className="section-heading"><h2>{map.name}</h2><span className="edition-pill">Vista del grupo</span></div>
       {selectedId && <>
+        {owned.length > 1 && <label className="form-field">
+          Ficha que quieres mover
+          <select value={selectedId} disabled={moving} onChange={(event) => { setSelected(event.target.value); setError(""); }}>
+            {owned.map((token) => <option key={token.combatantId} value={token.combatantId}>{actors.get(token.combatantId).name}</option>)}
+          </select>
+          <small>Puedes mover todos tus personajes de esta campaña desde aquí. También puedes tocar una de tus fichas en el mapa para seleccionarla.</small>
+        </label>}
         <p className="helper-text">Mueves a {actors.get(selectedId).name}. Toca una casilla libre para mover tu ficha. También puedes usar las flechas y Enter.</p>
         <p className="helper-text" role="status">{moving ? "Moviendo ficha…" : "Movimiento libre según lo acordado con el DM; no se descuenta velocidad ni se limita por turno."}</p>
       </>}

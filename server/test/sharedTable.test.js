@@ -116,10 +116,10 @@ test("messages and presented scenes remain available when tactical sharing is di
 });
 
 test("every public read checks character ownership and current membership before loading the campaign", async (context) => {
-  context.mock.method(Character, "find", () => ({ select: async () => [] }));
-  context.mock.method(Character, "findOne", (query) => {
-    assert.deepEqual(query, { _id: characterId, user, campaign: campaignId });
-    return { select: async (fields) => { assert.equal(fields, "_id"); return { _id: characterId }; } };
+  context.mock.method(Character, "find", (query) => {
+    if (query._id) return { select: async () => [] }; // Live token icons.
+    assert.deepEqual(query, { user, campaign: campaignId });
+    return { select: async (fields) => { assert.equal(fields, "_id"); return [{ _id: characterId }]; } };
   });
   context.mock.method(Campaign, "findById", async (id) => {
     assert.equal(id, campaignId);
@@ -133,7 +133,7 @@ test("every public read checks character ownership and current membership before
 });
 
 test("foreign characters and former members cannot load scenes or secrets", async (context) => {
-  context.mock.method(Character, "findOne", () => ({ select: async () => null }));
+  context.mock.method(Character, "find", () => ({ select: async () => [] }));
   context.mock.method(Campaign, "findById", () => assert.fail("Must not query private campaign"));
   const res = response();
   await table({ user, params: { id: campaignId }, query: { characterId } }, res);
@@ -142,7 +142,7 @@ test("foreign characters and former members cannot load scenes or secrets", asyn
 });
 
 test("malformed campaign and character IDs are rejected before database queries", async (context) => {
-  context.mock.method(Character, "findOne", () => assert.fail("Must not query members"));
+  context.mock.method(Character, "find", () => assert.fail("Must not query members"));
   for (const [id, query] of [["bad", { characterId }], [campaignId, {}], [campaignId, { characterId: { $ne: null } }], [campaignId, { characterId: "invalid" }]]) {
     const res = response();
     await table({ user, params: { id }, query }, res);

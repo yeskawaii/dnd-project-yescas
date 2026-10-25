@@ -1,7 +1,7 @@
 import { compareInitiative } from "../../shared/characterRules.mjs";
 import { tokenIcon } from "../../shared/mapTokens.mjs";
 // An allowlist, not a serialized DM workspace: private data never enters the response.
-export function playerTable(campaign, characterId, tokenIcons = {}) {
+export function playerTable(campaign, characterId, tokenIcons = {}, ownedCharacterIds = [characterId]) {
   const workspace = campaign.dmWorkspace;
   const presentation = workspace?.presentation;
   const enabled = presentation?.enabled === true;
@@ -33,9 +33,10 @@ export function playerTable(campaign, characterId, tokenIcons = {}) {
     const placedIds = new Set(map.tokens.map((token) => token.combatantId));
     map.participants = mapEntries.filter((entry) => placedIds.has(entry.id))
       .map(({ id, name, kind }) => ({ id, name, kind, icon: tokenIcon({ kind, icon: tokenIcons[id] }) }));
-    // Only expose control of this character's placed, visible player tokens.
+    // Ownership comes from the authenticated account's current campaign members.
+    const ownedCharacters = new Set(ownedCharacterIds.map(String));
     const owned = new Set(mapEntries.filter((entry) => entry.kind === "player" &&
-      entry.sourceId === String(characterId)).map((entry) => entry.id));
+      ownedCharacters.has(entry.sourceId)).map((entry) => entry.id));
     map.movableTokenIds = map.tokens.filter((token) => owned.has(token.combatantId))
       .map((token) => token.combatantId);
   }

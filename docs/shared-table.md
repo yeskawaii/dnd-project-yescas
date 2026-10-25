@@ -6,7 +6,7 @@ Abre una contienda y entra en **Compartir**. **Compartir con el grupo** habilita
 
 Mientras el combate esté compartido, la mesa se guarda tras un segundo sin cambios. Los jugadores consultan actualizaciones cada cuatro segundos mientras su pestaña del navegador está visible; al volver o recuperar la conexión se consulta inmediatamente. No usa WebSockets. Los errores de guardado detienen el guardado automático para evitar repetir conflictos; el DM conserva los cambios en pantalla y puede usar **Guardar mesa**. La revisión existente evita que una pestaña sobrescriba cambios de otra.
 
-La niebla del mapa oculta las fichas que estén en esas casillas, incluso si la criatura ya fue revelada en el orden de turnos. Los jugadores consultan el mapa; los movimientos siguen en manos del DM. La vida del encuentro conserva su significado anterior: es el registro del DM y no modifica la vida de la ficha del jugador.
+La niebla del mapa oculta las fichas que estén en esas casillas, incluso si la criatura ya fue revelada en el orden de turnos. Desde un solo personaje abierto, cada jugador puede seleccionar y mover las fichas visibles de todos sus personajes inscritos en esa campaña. El DM conserva el control de todas las fichas. La vida del encuentro conserva su significado anterior: es el registro del DM y no modifica la vida de la ficha del jugador.
 
 ## Escenas
 

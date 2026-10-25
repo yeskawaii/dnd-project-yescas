@@ -136,15 +136,16 @@ router.get("/:id/table", protect, async (req, res) => {
         typeof characterId !== "string" || !mongoose.isValidObjectId(characterId)) {
       return res.status(400).json({ message: "Mesa o personaje inválido" });
     }
-    const member = await Character.findOne({
-      _id: characterId, user: req.user._id || req.user, campaign: req.params.id,
+    const members = await Character.find({
+      user: req.user._id || req.user, campaign: req.params.id,
     }).select("_id");
-    if (!member) return res.status(403).json({ message: "Este personaje no tiene acceso a la contienda." });
+    const ownedCharacterIds = members.map((member) => String(member._id));
+    if (!ownedCharacterIds.includes(characterId)) return res.status(403).json({ message: "Este personaje no tiene acceso a la contienda." });
     const campaign = await Campaign.findById(req.params.id);
     if (!campaign) return res.status(404).json({ message: "Contienda no encontrada" });
     const icons = campaign.dmWorkspace?.presentation?.enabled && campaign.dmWorkspace?.presentation?.shareMap
       ? await campaignTokenIcons(campaign) : {};
-    res.json(playerTable(campaign, characterId, icons));
+    res.json(playerTable(campaign, characterId, icons, ownedCharacterIds));
   } catch {
     res.status(500).json({ message: "No se pudo actualizar la mesa compartida." });
   }
@@ -162,15 +163,16 @@ router.patch("/:id/table/token", protect, async (req, res) => {
         !Number.isInteger(revision) || revision < 0) {
       return res.status(400).json({ message: "Movimiento inválido." });
     }
-    const member = await Character.findOne({
-      _id: characterId, user: req.user._id || req.user, campaign: req.params.id,
+    const members = await Character.find({
+      user: req.user._id || req.user, campaign: req.params.id,
     }).select("_id");
-    if (!member) return res.status(403).json({ message: "Este personaje no tiene acceso a la contienda." });
+    const ownedCharacterIds = members.map((member) => String(member._id));
+    if (!ownedCharacterIds.includes(characterId)) return res.status(403).json({ message: "Este personaje no tiene acceso a la contienda." });
     const campaign = await Campaign.findById(req.params.id);
     if (!campaign) return res.status(404).json({ message: "Contienda no encontrada" });
-    const view = playerTable(campaign, characterId);
+    const view = playerTable(campaign, characterId, {}, ownedCharacterIds);
     if (!view.map?.movableTokenIds.includes(combatantId))
-      return res.status(403).json({ message: "Solo puedes mover tu propia ficha visible en el mapa compartido." });
+      return res.status(403).json({ message: "Solo puedes mover las fichas visibles de tus personajes en esta contienda." });
     if (revision !== (campaign.workspaceRevision || 0))
       return res.status(409).json({ message: "El mapa cambió. Actualiza la mesa y vuelve a elegir el destino." });
     const map = campaign.dmWorkspace.map;
@@ -190,7 +192,7 @@ router.patch("/:id/table/token", protect, async (req, res) => {
       $inc: { workspaceRevision: 1 },
     }, { new: true, arrayFilters: [{ "token.combatantId": combatantId }] });
     if (!saved) return res.status(409).json({ message: "El mapa cambió. Actualiza la mesa y vuelve a elegir el destino." });
-    res.json(playerTable(saved, characterId, await campaignTokenIcons(saved)));
+    res.json(playerTable(saved, characterId, await campaignTokenIcons(saved), ownedCharacterIds));
   } catch {
     res.status(500).json({ message: "No se pudo mover la ficha. Inténtalo de nuevo." });
   }

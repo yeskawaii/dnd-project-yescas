@@ -65,10 +65,13 @@ los valores existentes.
 
 ### Movimiento de los jugadores
 
-Con la mesa y el mapa compartidos, cada jugador puede mover la ficha de su
-personaje desde **Partida → Mesa compartida**, incluso sin un combate. El DM
-primero debe colocar su ficha fuera de la niebla desde **Mapa**. La ficha propia
-queda seleccionada: basta tocar una casilla libre, o usar flechas y Enter.
+Con la mesa y el mapa compartidos, cada jugador puede mover las fichas de todos
+sus personajes inscritos en esa campaña desde **Partida → Mesa compartida**,
+incluso sin un combate y sin cambiar de personaje. El DM primero debe colocar
+sus fichas fuera de la niebla desde **Mapa**. Si tiene varias fichas visibles,
+**Ficha que quieres mover** permite elegir una; también puede seleccionarla
+tocándola en el mapa o en la leyenda. Después basta tocar una casilla libre,
+o usar flechas y Enter.
 Al abrir el mapa o cuando el DM coloca tu ficha, la vista se centra en ella,
 también en celular. **Centrar mi ficha** permite recuperarla después de explorar
 el escenario. Puedes deslizar el mapa en ambas direcciones; al actualizarse
@@ -77,7 +80,8 @@ El movimiento se guarda al momento; el resto del grupo y el DM reciben las
 posiciones automáticamente cada cuatro segundos.
 
 El servidor comprueba la cuenta dueña del personaje y su pertenencia actual a
-la campaña en cada movimiento. El jugador solo controla su ficha de personaje;
+la campaña en cada consulta y movimiento. El jugador controla las fichas de
+sus personajes que sigan inscritos en esa campaña;
 las fichas ajenas, enemigos y acompañantes siguen bajo control del DM. No puede
 colocar ni retirar fichas, editar terreno ni entrar en casillas ocupadas, muros
 o niebla. Si su ficha queda bajo niebla, el DM debe volver a revelarla o moverla.

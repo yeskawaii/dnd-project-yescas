@@ -44,9 +44,8 @@ function campaign() {
   return doc;
 }
 function mockMember(context, doc) {
-  context.mock.method(Character, "find", () => ({ select: async () => [] }));
-  context.mock.method(Character, "findOne", (query) => ({ select: async () =>
-    query._id === characterId && query.user === user && query.campaign === campaignId ? { _id: characterId } : null }));
+  context.mock.method(Character, "find", (query) => ({ select: async () =>
+    query.user === user && query.campaign === campaignId ? [{ _id: characterId }] : [] }));
   context.mock.method(Campaign, "findById", async () => doc);
 }
 
@@ -57,6 +56,19 @@ test("public map advertises only this character's visible, placed player tokens"
   doc.dmWorkspace.map.tokens[0].x = 5;
   doc.dmWorkspace.map.tokens[0].y = 5;
   assert.deepEqual(playerTable(doc, characterId).map.movableTokenIds, []);
+});
+
+test("account controls cover several characters but still exclude fog, unplaced tokens, allies and enemies", () => {
+  const doc = campaign();
+  const owned = [characterId, otherCharacter];
+  assert.deepEqual(playerTable(doc, characterId, {}, owned).map.movableTokenIds, ["mine", "other"]);
+  doc.dmWorkspace.combat.combatants.find((entry) => entry.id === "hidden").sourceId = characterId;
+  doc.dmWorkspace.combat.combatants.find((entry) => entry.id === "hidden").visibleToPlayers = true;
+  doc.dmWorkspace.map.tokens[1].x = 5;
+  doc.dmWorkspace.map.tokens[1].y = 5;
+  assert.deepEqual(playerTable(doc, characterId, {}, owned).map.movableTokenIds, ["mine"]);
+  doc.dmWorkspace.map.tokens = doc.dmWorkspace.map.tokens.filter((token) => token.combatantId !== "mine");
+  assert.deepEqual(playerTable(doc, characterId, {}, owned).map.movableTokenIds, []);
 });
 
 test("an owner moves only their token atomically; secrets and arbitrary payload fields stay private", async (context) => {
@@ -122,7 +134,7 @@ test("ownership, membership, map sharing and fog are checked on every move", asy
   const fogged = response();
   await move(request(), fogged);
   assert.equal(fogged.statusCode, 403);
-  context.mock.method(Character, "findOne", () => ({ select: async () => null }));
+  context.mock.method(Character, "find", () => ({ select: async () => [] }));
   const departed = response();
   await move(request(), departed);
   assert.equal(departed.statusCode, 403);
